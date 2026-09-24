@@ -17,6 +17,7 @@ import { FiltersBlock } from "@/components/blocks/filters-block"
 import { IdeaBlock } from "@/components/blocks/idea-block"
 import { NoticeBlock } from "@/components/blocks/notice-block"
 import { ModeSwitch } from "@/components/chat/mode-switch"
+import { FormatMatrix } from "@/components/drive/format-matrix"
 import { UploadRow } from "@/components/files/upload-row"
 import type { UploadItem } from "@/components/files/use-uploader"
 import { SourceStatusTag } from "@/components/source/source-meta"
@@ -302,6 +303,14 @@ export function DesignGallery() {
             <p className="mt-1 text-xs text-muted-foreground">历史版本 1 · 同名但内容不同的文件自动保存为新版本</p>
           </State>
         </div>
+      </Section>
+
+      <Section
+        id="formats"
+        title="9. 文件浏览：格式支持矩阵"
+        note="“可直接打开”的格式在浏览器里完成，不需要服务器；其余格式会显示说明页和下载按钮，而不是空白或报错（逐级降级）。"
+      >
+        <FormatMatrix />
       </Section>
 
       <p className="flex items-center gap-1 text-sm text-muted-foreground">

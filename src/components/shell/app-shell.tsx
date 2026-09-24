@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { MenuIcon } from "lucide-react"
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -20,7 +20,7 @@ import { Sidebar, type SidebarVariant } from "./sidebar"
  * 侧栏变体的自动规则（“让位”原则：内容优先）：
  * - 手机（<768）：隐藏，顶部菜单按钮打开抽屉
  * - 平板（768–1024）：图标栏
- * - 桌面：展开；但打开预览面板且屏宽 <1536 时，自动收成图标栏，给内容腾地方
+ * - 桌面：展开；但打开预览面板、或进入自带目录树的页面，且屏宽 <1536 时，自动收成图标栏
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isMd = useMinWidth("md")
@@ -32,6 +32,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [userCollapsed, setUserCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const router = useRouter()
+  // 自带目录树的页面（文件浏览）：应用侧栏自动收成图标栏，把宽度让给目录和内容
+  const hasOwnTree = usePathname().startsWith("/browse")
 
   // ⌘K / Ctrl+K：全局检索
   useEffect(() => {
@@ -47,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // 手机上“显示 / 隐藏侧栏”交给 CSS 媒体查询决定（服务端渲染时就正确，不会先闪一下桌面布局）；
   // JS 只负责桌面上“展开 / 图标栏”的选择
-  const variant: SidebarVariant = !isLg ? "rail" : userCollapsed || (peekOpen && !is2xl) ? "rail" : "expanded"
+  const variant: SidebarVariant = !isLg ? "rail" : userCollapsed || ((peekOpen || hasOwnTree) && !is2xl) ? "rail" : "expanded"
 
   return (
     <TooltipProvider>

@@ -22,3 +22,11 @@
 | `components/files/use-uploader.ts` 的上传部分 | 分块上传：查重（指纹）→ 上传块（带块哈希）→ 合并校验；百度网盘 OAuth + 拉取任务 |
 | `lib/auth/permissions.ts` | 角色模板、成员权限；**所有接口在服务端校验权限** |
 | `lib/server/otp.ts`、`lib/server/prefs.ts`（内存） | 验证码存 Redis、偏好存数据库；`sendCodeEmail` 接邮件服务 |
+
+## 文件预览分期（v0.5）
+
+| 期 | 范围 | 状态 |
+|---|---|---|
+| 第一期 | 浏览器内：PDF、图片、文本 / Markdown / CSV、Rhino 3dm、STL / OBJ / glTF、ZIP、音视频 | ✓ 已实现（`/browse`） |
+| 第二期 | 服务器转换：Office / WPS → PDF、DWG → PDF 快照、HEIC / TIFF、RAR / 7z、IFC | 需要搭建转换服务（隔离容器 + 按文件指纹缓存） |
+| 第三期 | DWG 图层 / 测量、Revit、SketchUp | 评估商业授权 |

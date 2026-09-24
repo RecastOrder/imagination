@@ -7,6 +7,7 @@ import {
   LogOutIcon,
   SettingsIcon,
   FolderIcon,
+  FolderTreeIcon,
   LibraryIcon,
   MessageSquareIcon,
   PaletteIcon,
@@ -38,6 +39,7 @@ export type SidebarVariant = "expanded" | "rail" | "drawer"
 const NAV: { href: string; label: string; icon: LucideIcon; feature: Feature }[] = [
   { href: "/chat", label: "对话", icon: MessageSquareIcon, feature: "chat" },
   { href: "/library", label: "资料库", icon: LibraryIcon, feature: "library" },
+  { href: "/browse", label: "文件浏览", icon: FolderTreeIcon, feature: "library" },
   { href: "/notebook", label: "笔记本", icon: BookMarkedIcon, feature: "notebook" },
   { href: "/files", label: "我的文件", icon: FolderIcon, feature: "upload" },
 ]

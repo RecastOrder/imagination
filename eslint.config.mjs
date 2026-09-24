@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 从 node_modules 复制过来的第三方查看器资源
+    "public/vendor/**",
   ]),
 ]);
 

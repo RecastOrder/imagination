@@ -6,7 +6,7 @@
 
 ## 设计系统规则（必须遵守）
 
-- 分层：L0 令牌（`src/app/globals.css`）→ L1 基础组件（`src/components/ui`）→ L2 业务组件（`src/components/{source,chat,blocks,library,reader,notebook,files,admin,account}`）→ L3 骨架（`src/components/shell`）→ L4 页面（`src/app`）。下层不能依赖上层。
+- 分层：L0 令牌（`src/app/globals.css`）→ L1 基础组件（`src/components/ui`）→ L2 业务组件（`src/components/{source,chat,blocks,library,reader,notebook,files,admin,account,drive}`）→ L3 骨架（`src/components/shell`）→ L4 页面（`src/app`）。下层不能依赖上层。
 - 页面和组件里**禁止写原始色值**（#hex、oklch()、`text-[#…]`、Tailwind 调色板色如 `bg-stone-200`），只用语义令牌（`bg-surface`、`text-muted-foreground`、`bg-primary` 等）。
 - 强调色（primary，陶土色）只用于三处：主操作、当前位置/选中、焦点/引用。
 - 组件外观变化通过 `variant` / `size`（cva）表达，页面不临时覆盖组件样式。
@@ -22,6 +22,7 @@
 - 页面权限：页面开头用 `requireFeature()`（`src/lib/server/guard.ts`），没有权限返回 `<NoAccess />`；侧栏用 `useAccount().features` 隐藏无权限入口。
 - 账户级偏好（如对话模式）存服务端 `src/lib/server/prefs.ts`，前端通过 `useAccount()` 读写；不要再用 localStorage 存账户偏好。
 - `src/lib/server/*` 只能在服务端使用（接口、服务端组件、proxy）。
+- 文件浏览：新增可预览格式 = 在 `src/lib/drive/formats.ts` 登记 + 在 `src/components/drive/viewer-host.tsx` 注册查看器；大体积库（PDF.js、three.js）用 `next/dynamic` 按需加载。PDF.js 必须用 `pdfjs-dist/legacy/build/pdf.mjs`（兼容旧浏览器）。浏览器端资源由 `scripts/copy-vendor.mjs` 复制到 `public/vendor`（不提交）。
 - 文件：同名不同内容自动递增版本（`resolveVersion`，`src/lib/files/store.ts`），同名同内容不重复保存；历史版本永久保留。
 
 ## 学习陪伴模式（用户希望边做边学）

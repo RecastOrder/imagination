@@ -23,6 +23,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/chat/:path*",
+    "/browse/:path*",
     "/library/:path*",
     "/notebook/:path*",
     "/files/:path*",
