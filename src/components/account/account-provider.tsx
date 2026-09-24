@@ -14,6 +14,8 @@ interface AccountContextValue {
   isAdmin: boolean
   /** 各功能是否可用（同样只用于界面显示） */
   features: Record<Feature, boolean>
+  /** 我参与的项目（“加入项目”时可选） */
+  projects: { id: string; name: string }[]
   prefs: AccountPrefs
   setPref: <K extends keyof AccountPrefs>(key: K, value: AccountPrefs[K]) => void
   logout: () => Promise<void>
@@ -32,6 +34,7 @@ export function AccountProvider({
   roleLabel,
   isAdmin,
   features,
+  projects,
   initialPrefs,
   children,
 }: {
@@ -40,6 +43,7 @@ export function AccountProvider({
   roleLabel: string
   isAdmin: boolean
   features: Record<Feature, boolean>
+  projects: { id: string; name: string }[]
   initialPrefs: AccountPrefs
   children: React.ReactNode
 }) {
@@ -69,7 +73,7 @@ export function AccountProvider({
     router.refresh()
   }, [router])
 
-  return <AccountContext.Provider value={{ email, name, roleLabel, isAdmin, features, prefs, setPref, logout }}>{children}</AccountContext.Provider>
+  return <AccountContext.Provider value={{ email, name, roleLabel, isAdmin, features, projects, prefs, setPref, logout }}>{children}</AccountContext.Provider>
 }
 
 export function useAccount() {

@@ -1,6 +1,6 @@
 import { SOURCE_KINDS, SOURCE_KIND_ORDER } from "@/lib/sources/kinds"
 import { SOURCES } from "@/lib/sources/mock"
-import { PROJECTS } from "./projects"
+import type { ProjectSummary } from "./projects"
 import type { DriveNode } from "./types"
 
 /**
@@ -118,13 +118,27 @@ export const LIBRARY_TREE: DriveNode = folder(
   "平台提供",
 )
 
-export function rootsFor(space: Space, projectIds: string[]): DriveNode[] {
+/** 新项目还没有文件时，按建议的固定顶层结构生成空文件夹 */
+function emptyProject(p: ProjectSummary): DriveNode {
+  const id = `proj/${p.id}`
+  return folder(
+    id,
+    p.name,
+    ["00 收件箱", "01 资料依据", "02 设计过程", "03 成果", "04 往来", "99 归档"].map((n) => folder(`${id}/${n.slice(0, 2)}`, n, [])),
+    p.hint,
+  )
+}
+
+export function rootsFor(space: Space, projects: ProjectSummary[]): DriveNode[] {
   if (space === "public") return [LIBRARY_TREE]
   if (space === "mine") return [MY_TREE]
-  return PROJECTS.filter((p) => projectIds.includes(p.id)).map((p) => PROJECT_TREES[p.id])
+  return projects.map((p) => {
+    const t = PROJECT_TREES[p.id]
+    return t && t.type === "folder" ? { ...t, name: p.name, hint: p.hint } : emptyProject(p)
+  })
 }
 
 /** 所有空间的根（用来建索引、按链接定位文件） */
-export function allRoots(projectIds: string[]): DriveNode[] {
-  return [LIBRARY_TREE, ...rootsFor("project", projectIds), MY_TREE]
+export function allRoots(projects: ProjectSummary[]): DriveNode[] {
+  return [LIBRARY_TREE, ...rootsFor("project", projects), MY_TREE]
 }

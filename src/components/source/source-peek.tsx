@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { BookOpenTextIcon, XIcon } from "lucide-react"
+import { BookOpenTextIcon, FolderPlusIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { AddToProject } from "@/components/projects/add-to-project"
 import { getSource } from "@/lib/sources/mock"
 import { SourceKindBadge } from "./source-kind-badge"
 import { SourceMeta } from "./source-meta"
@@ -47,6 +48,15 @@ export function SourcePeek({
         <SourceKindBadge kind={source.kind} />
         <span className="truncate text-sm text-muted-foreground">资料预览</span>
         <div className="ml-auto flex items-center gap-1">
+          <AddToProject
+            defaultCategory={source.kind === "standard" ? "规范依据" : "案例参考"}
+            item={() => ({ title: source.code ? `${source.title}（${source.code}）` : source.title, sourceId: source.id, sectionId: focus?.id })}
+          >
+            <Button variant="outline" size="sm">
+              <FolderPlusIcon />
+              加入项目
+            </Button>
+          </AddToProject>
           <Button asChild size="sm">
             <Link href={`/library/${source.id}${focus ? `#${focus.id}` : ""}`}>
               <BookOpenTextIcon />

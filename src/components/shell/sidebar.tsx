@@ -7,6 +7,7 @@ import {
   LogOutIcon,
   SettingsIcon,
   FolderIcon,
+  FolderKanbanIcon,
   FolderTreeIcon,
   LibraryIcon,
   MessageSquareIcon,
@@ -37,6 +38,7 @@ import { ThemeToggle } from "./theme-toggle"
 export type SidebarVariant = "expanded" | "rail" | "drawer"
 
 const NAV: { href: string; label: string; icon: LucideIcon; feature: Feature }[] = [
+  { href: "/projects", label: "项目", icon: FolderKanbanIcon, feature: "library" },
   { href: "/chat", label: "对话", icon: MessageSquareIcon, feature: "chat" },
   { href: "/library", label: "资料库", icon: LibraryIcon, feature: "library" },
   { href: "/browse", label: "文件浏览", icon: FolderTreeIcon, feature: "library" },

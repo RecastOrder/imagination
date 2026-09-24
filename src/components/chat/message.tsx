@@ -1,10 +1,11 @@
 "use client"
 
-import { BookmarkPlusIcon, LoaderCircleIcon } from "lucide-react"
+import { BookmarkPlusIcon, FolderPlusIcon, LoaderCircleIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { BlockRenderer, type BlockContext } from "@/components/blocks/registry"
 import { SaveToNotebook } from "@/components/notebook/save-to-notebook"
+import { AddToProject } from "@/components/projects/add-to-project"
 import { CHAT_MODES } from "@/lib/chat/modes"
 import type { Message } from "@/lib/chat/types"
 import { cn } from "@/lib/utils"
@@ -77,6 +78,20 @@ export function MessageView({ message, ctx }: { message: Message; ctx: BlockCont
               存入笔记本
             </Button>
           </SaveToNotebook>
+          <AddToProject
+            defaultCategory="待确认"
+            item={() => {
+              const n = answerToNote(message)
+              // 去掉正文里的引用编号 [1][2]，放进清单时读起来更干净
+              const text = n.text.replace(/\s*\[\d+\]/g, "")
+              return { title: text.slice(0, 40) + (text.length > 40 ? "…" : ""), text, sourceId: n.sourceId }
+            }}
+          >
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <FolderPlusIcon />
+              加入项目
+            </Button>
+          </AddToProject>
         </div>
       )}
     </div>

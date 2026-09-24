@@ -89,7 +89,7 @@ export function ChatView() {
       <div className="mx-auto w-full max-w-3xl px-4 pb-4 sm:px-6">
         <Composer onSend={ask} onStop={stop} busy={busy} placeholder="继续追问…" {...composerMode} />
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          回答基于知识库生成，重要条文请以原文为准
+          辅助参考：回答基于知识库生成，条文与结论请以原文和本人判断为准
         </p>
       </div>
     </div>

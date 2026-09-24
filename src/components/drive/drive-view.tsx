@@ -22,6 +22,7 @@ import { useMinWidth } from "@/hooks/use-media-query"
 import { listArchive } from "@/lib/drive/archive"
 import { FORMATS, SUPPORT_LABEL, formatOf } from "@/lib/drive/formats"
 import { SPACES, allRoots, rootsFor, spaceOf, type Space } from "@/lib/drive/sample-tree"
+import type { ProjectSummary } from "@/lib/drive/projects"
 import type { DriveFile, DriveNode } from "@/lib/drive/types"
 import { formatBytes } from "@/lib/files/checksum"
 import { cn } from "@/lib/utils"
@@ -41,23 +42,23 @@ import { SourceViewer } from "./viewers/source-viewer"
  * 选中的文件记在网址里（?f=…），可以分享链接、用浏览器后退。
  * 平台资料库、个人项目文件、压缩包内部都用同一棵树、同一套查看器。
  */
-export function DriveView({ projectIds }: { projectIds: string[] }) {
+export function DriveView({ projects }: { projects: ProjectSummary[] }) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
   const selectedId = params.get("f")
   // 当前空间：选中的文件属于哪个空间就是哪个；没选文件时看网址参数，默认先看项目
   const space: Space =
-    spaceOf(selectedId) ?? (params.get("space") as Space | null) ?? (projectIds.length ? "project" : "public")
-  const roots = useMemo(() => rootsFor(space, projectIds), [space, projectIds])
-  const everything = useMemo(() => allRoots(projectIds), [projectIds])
+    spaceOf(selectedId) ?? (params.get("space") as Space | null) ?? (projects.length ? "project" : "public")
+  const roots = useMemo(() => rootsFor(space, projects), [space, projects])
+  const everything = useMemo(() => allRoots(projects), [projects])
   const isLg = useMinWidth("lg")
   const treePanel = usePanelRef()
   const [treeCollapsed, setTreeCollapsed] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [info, setInfo] = useState(false)
   // 默认展开每个空间的根目录
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(["lib", "me", ...projectIds.map((id) => `proj/${id}`)]))
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(["lib", "me", ...projects.map((p) => `proj/${p.id}`)]))
   const [zipKids, setZipKids] = useState<Record<string, DriveNode[]>>({})
   const [loading, setLoading] = useState<Set<string>>(new Set())
   const [errors, setErrors] = useState<Record<string, string>>({})

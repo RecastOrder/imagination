@@ -24,6 +24,7 @@ export const config = {
   matcher: [
     "/chat/:path*",
     "/browse/:path*",
+    "/projects/:path*",
     "/library/:path*",
     "/notebook/:path*",
     "/files/:path*",

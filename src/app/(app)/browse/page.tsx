@@ -4,8 +4,8 @@ import type { Metadata } from "next"
 import { DriveView } from "@/components/drive/drive-view"
 import { NoAccess } from "@/components/shell/no-access"
 import { PageSkeleton } from "@/components/shell/page-skeleton"
-import { projectsFor } from "@/lib/drive/projects"
 import { requireFeature } from "@/lib/server/guard"
+import { listProjectsFor } from "@/lib/server/projects"
 
 export const metadata: Metadata = { title: "文件浏览" }
 
@@ -13,10 +13,14 @@ export const metadata: Metadata = { title: "文件浏览" }
 export default async function BrowsePage() {
   const user = await requireFeature("library")
   if (!user) return <NoAccess feature="资料库" />
-  const projectIds = projectsFor(user.email, user.permissions.features.admin.on)
+  const projects = listProjectsFor(user.email).map((p) => ({
+    id: p.id,
+    name: p.name,
+    hint: `${p.location.city.replace(/市$/, "")} · ${p.type} · ${p.stage}`,
+  }))
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
-      <DriveView projectIds={projectIds} />
+      <DriveView projects={projects} />
     </Suspense>
   )
 }

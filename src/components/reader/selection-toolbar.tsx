@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { BookmarkPlusIcon, CopyIcon, HighlighterIcon, SparklesIcon } from "lucide-react"
+import { BookmarkPlusIcon, CopyIcon, FolderPlusIcon, HighlighterIcon, SparklesIcon } from "lucide-react"
 
 import { toast } from "@/components/ui/toast"
 import { SaveToNotebook } from "@/components/notebook/save-to-notebook"
+import { AddToProject } from "@/components/projects/add-to-project"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { highlightsStore, newId } from "@/lib/notebook/store"
 import type { Source } from "@/lib/sources/types"
@@ -122,6 +123,18 @@ export function SelectionToolbar({
           存入笔记本
         </button>
       </SaveToNotebook>
+      <AddToProject
+        side={coarse ? "top" : "bottom"}
+        onOpenChange={setMenuOpen}
+        onAdded={done}
+        defaultCategory={source.kind === "standard" ? "规范依据" : "案例参考"}
+        item={() => ({ title: `${source.title} · ${section?.title ?? ""}`, text: sel.text, sourceId: source.id, sectionId: sel.sectionId })}
+      >
+        <button type="button" className={btn}>
+          <FolderPlusIcon />
+          加入项目
+        </button>
+      </AddToProject>
       <button
         type="button"
         className={btn}
