@@ -1,0 +1,210 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* 暗色模式由 <html class="dark"> 控制（跟随系统，见 layout.tsx） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==========================================================================
+   设计令牌（Design Tokens）—— 三层结构
+   第 1 层 原始值 reference：唯一允许出现色值的地方，只描述“这是什么颜色”
+   第 2 层 语义 semantic   ：描述“用在哪里”，组件只能使用这一层
+   第 3 层 组件 component  ：个别组件需要单独调节时才加
+   规则：页面和组件里禁止写 #hex / oklch()，一律通过语义令牌引用。
+   ========================================================================== */
+
+:root {
+  /* ---------- 第 1 层：原始值 ---------- */
+
+  /* 石材灰：偏暖的中性色，占界面 90%（纸张、混凝土的质感） */
+  --stone-0: oklch(1 0 0);
+  --stone-50: oklch(0.985 0.004 80);
+  --stone-100: oklch(0.967 0.006 80);
+  --stone-150: oklch(0.945 0.007 78);
+  --stone-200: oklch(0.922 0.008 75);
+  --stone-300: oklch(0.868 0.01 75);
+  --stone-400: oklch(0.708 0.012 70);
+  --stone-500: oklch(0.556 0.012 70);
+  --stone-600: oklch(0.45 0.01 70);
+  --stone-700: oklch(0.37 0.008 70);
+  --stone-800: oklch(0.27 0.006 70);
+  --stone-850: oklch(0.225 0.005 70);
+  --stone-900: oklch(0.195 0.005 70);
+  --stone-950: oklch(0.155 0.004 70);
+
+  /* 陶土色：唯一的强调色，只给“主操作 / 当前位置 / 焦点” */
+  --terracotta-50: oklch(0.975 0.015 55);
+  --terracotta-100: oklch(0.945 0.035 52);
+  --terracotta-300: oklch(0.8 0.09 48);
+  --terracotta-400: oklch(0.71 0.125 45);
+  --terracotta-500: oklch(0.63 0.14 42);
+  --terracotta-600: oklch(0.555 0.14 40);
+  --terracotta-700: oklch(0.47 0.12 38);
+
+  /* 语义状态色：只在表达状态时出现 */
+  --red-500: oklch(0.58 0.2 27);
+  --red-400: oklch(0.68 0.17 25);
+  --green-600: oklch(0.55 0.12 150);
+  --green-400: oklch(0.74 0.13 150);
+  --amber-600: oklch(0.62 0.13 75);
+  --amber-400: oklch(0.8 0.13 80);
+
+  /* 尺寸类原始值 */
+  --radius: 0.625rem; /* 10px，其余圆角由它推导 */
+
+  /* ---------- 第 2 层：语义（浅色） ---------- */
+  --background: var(--stone-50);
+  --foreground: var(--stone-900);
+  --surface: var(--stone-0); /* 卡片、面板等“浮在纸面上”的层 */
+  --surface-sunken: var(--stone-100); /* 输入区、代码块等“凹下去”的层 */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--stone-0);
+  --popover-foreground: var(--foreground);
+
+  --primary: var(--terracotta-600);
+  --primary-foreground: var(--stone-0);
+  --primary-subtle: var(--terracotta-50); /* 选中项的浅底 */
+  --primary-subtle-foreground: var(--terracotta-700);
+
+  --secondary: var(--stone-150);
+  --secondary-foreground: var(--stone-800);
+  --muted: var(--stone-100);
+  --muted-foreground: var(--stone-500);
+  --accent: var(--stone-150); /* 注意：shadcn 里 accent 指“悬停底色”，不是品牌色 */
+  --accent-foreground: var(--stone-900);
+
+  --destructive: var(--red-500);
+  --success: var(--green-600);
+  --warning: var(--amber-600);
+
+  --border: var(--stone-200);
+  --border-strong: var(--stone-300);
+  --input: var(--stone-300);
+  --ring: var(--terracotta-500);
+
+  --sidebar: var(--stone-100);
+  --sidebar-foreground: var(--stone-800);
+  --sidebar-accent: var(--stone-200);
+  --sidebar-accent-foreground: var(--stone-900);
+  --sidebar-border: var(--stone-200);
+
+  --shadow-color: 30 10% 20%;
+
+  /* ---------- 第 3 层：组件 ---------- */
+  --composer-radius: calc(var(--radius) + 8px);
+  --reader-measure: 42rem; /* 阅读正文最佳行宽 ≈ 每行 35~40 个汉字 */
+}
+
+/* ---------- 第 2 层：语义（暗色）—— 只重新映射，组件不用改 ---------- */
+.dark {
+  --background: var(--stone-950);
+  --foreground: var(--stone-100);
+  --surface: var(--stone-900);
+  --surface-sunken: var(--stone-850);
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--stone-850);
+  --popover-foreground: var(--foreground);
+
+  --primary: var(--terracotta-400);
+  --primary-foreground: var(--stone-950);
+  --primary-subtle: oklch(0.3 0.05 42);
+  --primary-subtle-foreground: var(--terracotta-300);
+
+  --secondary: var(--stone-800);
+  --secondary-foreground: var(--stone-100);
+  --muted: var(--stone-850);
+  --muted-foreground: var(--stone-400);
+  --accent: var(--stone-800);
+  --accent-foreground: var(--stone-50);
+
+  --destructive: var(--red-400);
+  --success: var(--green-400);
+  --warning: var(--amber-400);
+
+  --border: var(--stone-800);
+  --border-strong: var(--stone-700);
+  --input: var(--stone-700);
+  --ring: var(--terracotta-400);
+
+  --sidebar: var(--stone-900);
+  --sidebar-foreground: var(--stone-200);
+  --sidebar-accent: var(--stone-800);
+  --sidebar-accent-foreground: var(--stone-50);
+  --sidebar-border: var(--stone-800);
+
+  --shadow-color: 0 0% 0%;
+}
+
+/* 把语义令牌注册给 Tailwind：之后就能写 bg-surface、text-muted-foreground 等 */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-foreground: var(--primary-subtle-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  /* 圆角阶梯：sm 6 / md 8 / lg 10 / xl 14 / 2xl 18 */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* 字体：界面用无衬线，长文阅读用衬线（宋体） */
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "PingFang SC",
+    "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-serif:
+    "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun",
+    ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, monospace;
+
+  /* 阴影克制：优先用边框分层，阴影只给真正“浮起来”的东西 */
+  --shadow-float:
+    0 1px 2px hsl(var(--shadow-color) / 0.06),
+    0 8px 24px -6px hsl(var(--shadow-color) / 0.14);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 22%, transparent);
+  }
+}

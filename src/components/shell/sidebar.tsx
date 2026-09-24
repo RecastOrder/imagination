@@ -1,0 +1,202 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import {
+  LibraryIcon,
+  MessageSquareIcon,
+  PaletteIcon,
+  PanelLeftIcon,
+  SearchIcon,
+  SquarePenIcon,
+  type LucideIcon,
+} from "lucide-react"
+
+import { Kbd } from "@/components/ui/kbd"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
+import { Logo } from "./logo"
+import { ThemeToggle } from "./theme-toggle"
+
+/**
+ * 左侧导航。一个组件，三种变体：
+ * - expanded：桌面，完整文字
+ * - rail    ：窄桌面 / 打开预览面板时，只显示图标（把宽度让给内容）
+ * - drawer  ：手机，从左侧滑出（外层由 AppShell 包 Sheet）
+ * 结构固定为：顶部（新建、搜索）→ 中部（导航、最近）→ 底部（主题、用户）
+ */
+export type SidebarVariant = "expanded" | "rail" | "drawer"
+
+const NAV: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/chat", label: "对话", icon: MessageSquareIcon },
+  { href: "/library", label: "资料库", icon: LibraryIcon },
+  { href: "/design", label: "设计系统", icon: PaletteIcon },
+]
+
+const RECENT = [
+  { id: "c1", title: "上海住宅日照间距要求" },
+  { id: "c2", title: "光之教堂的相关报道" },
+  { id: "c3", title: "平屋面防水构造做法" },
+]
+
+export function Sidebar({
+  variant,
+  onToggle,
+  onNavigate,
+}: {
+  variant: SidebarVariant
+  onToggle?: () => void
+  onNavigate?: () => void
+}) {
+  const pathname = usePathname()
+  const rail = variant === "rail"
+
+  return (
+    <nav
+      aria-label="主导航"
+      className={cn(
+        "flex h-full shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200",
+        variant === "expanded" && "w-64 border-r border-sidebar-border",
+        variant === "rail" && "w-14 items-center border-r border-sidebar-border",
+        variant === "drawer" && "w-full",
+      )}
+    >
+      {/* 顶部 */}
+      <div className={cn("flex h-14 items-center gap-2", rail ? "justify-center" : "px-3")}>
+        {!rail && (
+          <Link href="/chat" onClick={onNavigate} className="rounded-md px-1 text-[15px]">
+            <Logo />
+          </Link>
+        )}
+        {onToggle && (
+          <RailTip label={rail ? "展开侧栏" : "收起侧栏"} show>
+            <button
+              type="button"
+              onClick={onToggle}
+              className={cn(
+                "flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                !rail && "ml-auto",
+              )}
+              aria-label={rail ? "展开侧栏" : "收起侧栏"}
+            >
+              <PanelLeftIcon className="size-4" />
+            </button>
+          </RailTip>
+        )}
+      </div>
+
+      <div className={cn("flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
+        <SidebarItem href="/chat" icon={SquarePenIcon} label="新建对话" rail={rail} onNavigate={onNavigate} />
+        <SidebarItem
+          href="/library"
+          icon={SearchIcon}
+          label="检索资料"
+          rail={rail}
+          onNavigate={onNavigate}
+          trailing={<Kbd>⌘K</Kbd>}
+        />
+      </div>
+
+      {/* 中部 */}
+      <div className={cn("mt-4 flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
+        {!rail && <SectionLabel>工作区</SectionLabel>}
+        {NAV.map((item) => (
+          <SidebarItem
+            key={item.href}
+            {...item}
+            rail={rail}
+            active={pathname === item.href || pathname.startsWith(item.href + "/")}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </div>
+
+      {!rail && (
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto px-2">
+          <SectionLabel>最近对话</SectionLabel>
+          {RECENT.map((c) => (
+            <Link
+              key={c.id}
+              href="/chat"
+              onClick={onNavigate}
+              className="block truncate rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              {c.title}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* 底部 */}
+      <div className={cn("mt-auto flex flex-col gap-2 border-t border-sidebar-border py-3", rail ? "items-center" : "px-3")}>
+        {rail ? <ThemeToggle compact /> : <ThemeToggle />}
+        <div className={cn("flex items-center gap-2.5", rail && "justify-center")}>
+          <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
+            建
+          </span>
+          {!rail && (
+            <span className="min-w-0 text-sm leading-tight">
+              <span className="block truncate font-medium">建筑师（演示）</span>
+              <Link href="/" className="text-xs text-muted-foreground hover:underline">
+                退出登录
+              </Link>
+            </span>
+          )}
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="px-2.5 pt-1 pb-1.5 text-xs font-medium text-muted-foreground">{children}</p>
+}
+
+function RailTip({ label, show, children }: { label: string; show: boolean; children: React.ReactNode }) {
+  if (!show) return <>{children}</>
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+function SidebarItem({
+  href,
+  icon: Icon,
+  label,
+  rail,
+  active,
+  trailing,
+  onNavigate,
+}: {
+  href: string
+  icon: LucideIcon
+  label: string
+  rail: boolean
+  active?: boolean
+  trailing?: React.ReactNode
+  onNavigate?: () => void
+}) {
+  return (
+    <RailTip label={label} show={rail}>
+      <Link
+        href={href}
+        onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
+        aria-label={rail ? label : undefined}
+        className={cn(
+          "flex items-center gap-2.5 rounded-md text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          rail ? "size-9 justify-center" : "h-9 px-2.5",
+          // 当前位置：用强调色的浅底 + 强调色图标——强调色的三种用途之一
+          active && "bg-primary-subtle text-primary-subtle-foreground hover:bg-primary-subtle",
+        )}
+      >
+        <Icon className={cn("size-4 shrink-0", active && "text-primary")} />
+        {!rail && <span className="truncate">{label}</span>}
+        {!rail && trailing && <span className="ml-auto">{trailing}</span>}
+      </Link>
+    </RailTip>
+  )
+}
