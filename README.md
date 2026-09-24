@@ -29,6 +29,7 @@ npm run dev        # http://localhost:3000
 | `/design` | 设计系统活样张 |
 
 - 设计规则与协作约定：[`CLAUDE.md`](./CLAUDE.md)
+- 路线图（整体步骤、当前进度、需求池）：[`docs/roadmap.md`](./docs/roadmap.md)
 - 开发流程：[`docs/dev-process.md`](./docs/dev-process.md)
 - 设计决策日志：[`docs/design-journal/`](./docs/design-journal/)
 

@@ -29,7 +29,7 @@ const F = (label: string, group: FormatGroup, viewer: ViewerKey, support: Suppor
   note,
 })
 
-const OFFICE_NOTE = "第二期：服务器将其转换为 PDF 后在线预览（LibreOffice / OnlyOffice 私有部署，文件不出公司）"
+const OFFICE_NOTE = "第二期（必须完成）：服务器把它转换成 PDF 后在线预览（在自己的服务器上部署 LibreOffice，文件不出公司）"
 
 export const FORMATS: Record<string, FormatInfo> = {
   pdf: F("PDF", "文档", "pdf", "full"),
@@ -66,14 +66,9 @@ export const FORMATS: Record<string, FormatInfo> = {
   rar: F("RAR 压缩包", "压缩包", "pending", "phase2", "第二期：由服务器解包后，像 ZIP 一样在左侧展开浏览"),
   "7z": F("7z 压缩包", "压缩包", "pending", "phase2", "第二期：由服务器解包后，像 ZIP 一样在左侧展开浏览"),
   ifc: F("IFC 模型", "三维", "pending", "phase2", "第二期：用开源 web-ifc 在浏览器中查看构件和属性"),
-  dwg: F(
-    "DWG 图纸",
-    "图纸",
-    "pending",
-    "phase2",
-    "第二期：服务器转换为 PDF / 图片快照预览（可缩放）。第三期再评估商业 SDK，支持图层开关与测量",
-  ),
-  dxf: F("DXF 图纸", "图纸", "pending", "phase2", "第二期：同 DWG"),
+  // 已定：DWG 不做在线预览，下载后用本机 CAD 打开
+  dwg: F("DWG 图纸", "图纸", "pending", "info", "暂不提供在线预览。请下载后用 AutoCAD、浩辰、中望等本机 CAD 软件打开"),
+  dxf: F("DXF 图纸", "图纸", "pending", "info", "暂不提供在线预览，同 DWG"),
   rvt: F("Revit 模型", "三维", "pending", "phase3", "第三期：需要云端转换服务；建议先从 Revit 导出 IFC 再上传"),
   skp: F("SketchUp 模型", "三维", "pending", "phase3", "第三期：需要转换为 glTF；建议先导出 glTF / OBJ 再上传"),
   gh: F("Grasshopper 定义", "三维", "pending", "info", "只能查看文件信息；运行电池图需要 Rhino.Compute 服务器，暂不计划"),
