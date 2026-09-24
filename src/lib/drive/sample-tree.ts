@@ -7,7 +7,7 @@ import type { DriveNode } from "./types"
  * 文件浏览的三个空间（已定）：
  * - 公共：平台资料库（规范、图集、书籍…），按账号的资料范围权限显示
  * - 项目：只显示自己参与的项目；项目成员共享
- * - 我的：只有自己能看到
+ * - 我的：默认只有自己能看到；可以把文件 / 文件夹共享给同事（仅浏览 或 浏览 + 编辑）
  * 演示阶段文件来自 public/samples/drive；上线后来自对象存储 / NAS / OneDrive。
  */
 export type Space = "public" | "project" | "mine"
@@ -22,7 +22,7 @@ export function spaceOf(id: string | null | undefined): Space | null {
   if (!id) return null
   if (id.startsWith("lib")) return "public"
   if (id.startsWith("proj/")) return "project"
-  if (id.startsWith("me")) return "mine"
+  if (id.startsWith("me/") || id === SHARED_ROOT_ID) return "mine"
   return null
 }
 
@@ -88,16 +88,47 @@ const school = folder(
 
 export const PROJECT_TREES: Record<string, DriveNode> = { housing, school }
 
-/** 我的：个人文件（演示中每个人看到同一份示例） */
-export const MY_TREE: DriveNode = folder(
-  "me",
-  "我的文件",
-  [
-    file("me/notes", "我的笔记.md", "my-notes.md", 209, 23),
-    folder("me/ref", "参考图片", [file("me/ref/photo", "街道界面参考.jpg", "site-photo.jpg", 109547, 9)]),
-  ],
-  "仅自己可见",
-)
+/**
+ * 我的：个人文件。节点 id 带上主人的邮箱（me/邮箱/…），
+ * 这样共享给别人时，对方拿到的是同一个 id——链接、标注都能对上。
+ * 演示中每个人的内容是同一份示例。
+ */
+export function myTree(email: string): DriveNode {
+  const id = `me/${email}`
+  return folder(
+    id,
+    "我的文件",
+    [
+      file(`${id}/notes`, "我的笔记.md", "my-notes.md", 283, 23),
+      folder(`${id}/ref`, "参考图片", [file(`${id}/ref/photo`, "街道界面参考.jpg", "site-photo.jpg", 109547, 9)]),
+      folder(`${id}/meeting`, "会议纪要", [file(`${id}/meeting/0918`, "会议纪要-0918.txt", "minutes-0918.txt", 236, 18)]),
+    ],
+    "默认仅自己可见",
+  )
+}
+
+/** 个人文件的主人：me/邮箱/… → 邮箱 */
+export function ownerOf(id: string): string | null {
+  const m = /^me\/([^/!]+)/.exec(id)
+  return m ? m[1] : null
+}
+
+/** 在一棵树里按 id 找节点 */
+export function findNode(root: DriveNode, id: string): DriveNode | null {
+  if (root.id === id) return root
+  if (root.type !== "folder") return null
+  for (const c of root.children) {
+    const hit = findNode(c, id)
+    if (hit) return hit
+  }
+  return null
+}
+
+/** “共享给我的”：别人共享来的文件 / 文件夹，放在“我的”空间里自己的文件下面 */
+export const SHARED_ROOT_ID = "shared"
+export function sharedRoot(items: DriveNode[]): DriveNode {
+  return folder(SHARED_ROOT_ID, "共享给我的", items, items.length ? `${items.length} 项` : undefined)
+}
 
 /** 公共：平台资料库，按资料类型分文件夹 */
 export const LIBRARY_TREE: DriveNode = folder(
@@ -129,9 +160,10 @@ function emptyProject(p: ProjectSummary): DriveNode {
   )
 }
 
-export function rootsFor(space: Space, projects: ProjectSummary[]): DriveNode[] {
+/** 每个空间的根：公共 = 资料库；项目 = 我参与的项目；我的 = 自己的文件 + 共享给我的 */
+export function rootsFor(space: Space, projects: ProjectSummary[], mine: DriveNode[]): DriveNode[] {
   if (space === "public") return [LIBRARY_TREE]
-  if (space === "mine") return [MY_TREE]
+  if (space === "mine") return mine
   return projects.map((p) => {
     const t = PROJECT_TREES[p.id]
     return t && t.type === "folder" ? { ...t, name: p.name, hint: p.hint } : emptyProject(p)
@@ -139,6 +171,6 @@ export function rootsFor(space: Space, projects: ProjectSummary[]): DriveNode[] 
 }
 
 /** 所有空间的根（用来建索引、按链接定位文件） */
-export function allRoots(projects: ProjectSummary[]): DriveNode[] {
-  return [LIBRARY_TREE, ...rootsFor("project", projects), MY_TREE]
+export function allRoots(projects: ProjectSummary[], mine: DriveNode[]): DriveNode[] {
+  return [LIBRARY_TREE, ...rootsFor("project", projects, mine), ...mine]
 }

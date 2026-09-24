@@ -6,7 +6,7 @@
 
 ## 设计系统规则（必须遵守）
 
-- 分层：L0 令牌（`src/app/globals.css`）→ L1 基础组件（`src/components/ui`）→ L2 业务组件（`src/components/{source,chat,blocks,library,reader,notebook,files,admin,account,drive}`）→ L3 骨架（`src/components/shell`）→ L4 页面（`src/app`）。下层不能依赖上层。
+- 分层：L0 令牌（`src/app/globals.css`）→ L1 基础组件（`src/components/ui`）→ L2 业务组件（`src/components/{source,chat,blocks,library,reader,notebook,files,admin,account,drive,projects,share}`）→ L3 骨架（`src/components/shell`）→ L4 页面（`src/app`）。下层不能依赖上层。
 - 页面和组件里**禁止写原始色值**（#hex、oklch()、`text-[#…]`、Tailwind 调色板色如 `bg-stone-200`），只用语义令牌（`bg-surface`、`text-muted-foreground`、`bg-primary` 等）。
 - 强调色（primary，陶土色）只用于三处：主操作、当前位置/选中、焦点/引用。
 - 组件外观变化通过 `variant` / `size`（cva）表达，页面不临时覆盖组件样式。
@@ -34,7 +34,8 @@
 
 - 平台是**辅助工具**：不做规范审查、不当审核方。界面措辞要体现“供参考，结论由本人确认”；机械核对（数字比较）可以做，但必须写明不代替审查。
 - 规范被替代时必须标出，并列出变更内容和影响范围（`src/lib/projects/changes.ts`）。
-- 项目：位置细到区，按位置自动匹配三级要求（`src/lib/projects/regional.ts`）；项目负责人管成员；权限判断在 `src/lib/server/projects.ts`。
+- 项目：位置细到区，按位置自动匹配三级要求（`src/lib/projects/regional.ts`）；权限判断在 `src/lib/server/projects.ts`。
+- 权限（已定）：管理员全部权限；项目角色三档 负责人 / 可编辑 / 仅浏览（`MemberRole`）——“编辑内容”（`canEditContent`）与“管理项目和成员权限”（`canManage`）分开校验。个人文件用同一套档位（`src/lib/access.ts`：view / edit）共享给同事，只有主人能共享（`src/lib/server/shares.ts`），共享文件夹覆盖其中所有文件。仅浏览时查看器传 `readOnly`，不显示标注工具。权限下拉统一用 `src/components/share/access-menu.tsx`。
 
 ## 学习陪伴模式（用户希望边做边学）
 

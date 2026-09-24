@@ -4,7 +4,8 @@ import { MapPinIcon, UsersIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { getCurrentUser } from "@/lib/server/current-user"
-import { listProjectsFor } from "@/lib/server/projects"
+import { MEMBER_ROLES } from "@/lib/projects/types"
+import { roleIn, listProjectsFor } from "@/lib/server/projects"
 
 export const metadata: Metadata = { title: "项目" }
 
@@ -25,6 +26,7 @@ export default async function ProjectsPage() {
           <ul className="mt-8 grid gap-3 sm:grid-cols-2">
             {projects.map((p) => {
               const lead = p.members.find((m) => m.role === "lead")
+              const mine = roleIn(p, user!.email)
               return (
                 <li key={p.id}>
                   <Link href={`/projects/${p.id}`} className="block rounded-xl border bg-surface p-5 transition-colors hover:border-border-strong">
@@ -40,6 +42,7 @@ export default async function ProjectsPage() {
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                       <UsersIcon className="size-3.5" />
                       {p.members.length} 位成员 · 负责人 {lead?.email.split("@")[0]}
+                      <span className="ml-auto">我的权限：{mine ? MEMBER_ROLES[mine].label : "管理员"}</span>
                     </p>
                   </Link>
                 </li>

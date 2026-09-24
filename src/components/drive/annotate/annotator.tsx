@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { EyeIcon } from "lucide-react"
 
 import { toast } from "@/components/ui/toast"
 import { paperRatio, scaleFor, type Mark } from "@/lib/drive/annotations"
@@ -20,12 +21,15 @@ export function useAnnotator({
   fileId,
   fileName,
   unit,
+  readOnly,
   onJump,
 }: {
   fileId: string
   fileName: string
   /** 页面单位：PDF 是点（pt），图片是像素（px） */
   unit: "pt" | "px"
+  /** 仅浏览：不显示工具、不响应快捷键（已有的标注仍然显示） */
+  readOnly?: boolean
   onJump?: (m: Mark) => void
 }) {
   const api = useAnnotations(fileId)
@@ -35,6 +39,7 @@ export function useAnnotator({
 
   // 快捷键：V P R M C 切换工具，Esc 回到浏览，Delete 删除选中的标注（在输入框里打字时不触发）
   useEffect(() => {
+    if (readOnly) return
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
       if (t.closest("input, textarea, [contenteditable=true]") || e.metaKey || e.ctrlKey || e.altKey) return
@@ -51,9 +56,14 @@ export function useAnnotator({
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [setTool, setSelectedId, selectedId, remove])
+  }, [readOnly, setTool, setSelectedId, selectedId, remove])
 
-  const toolbar = (
+  const toolbar = readOnly ? (
+    <span className="flex h-7 items-center gap-1 px-1 text-xs text-muted-foreground" title="你对这个文件是“仅浏览”权限">
+      <EyeIcon className="size-3.5" />
+      仅浏览，不能标注
+    </span>
+  ) : (
     <AnnotateToolbar
       tool={tool}
       onTool={(t) => {
@@ -75,7 +85,7 @@ export function useAnnotator({
       displayScale={displayScale}
       marks={data.marks.filter((m) => m.page === page)}
       mmPerUnit={scaleFor(data, page)}
-      tool={tool}
+      tool={readOnly ? "browse" : tool}
       selectedId={selectedId}
       onSelect={(id) => {
         setSelectedId(id)
@@ -89,7 +99,7 @@ export function useAnnotator({
     />
   )
 
-  const panelEl = panel ? (
+  const panelEl = panel && !readOnly ? (
     <MarksPanel api={api} fileId={fileId} fileName={fileName} unit={unit} onClose={() => setPanel(false)} onJump={(m) => onJump?.(m)} />
   ) : null
 

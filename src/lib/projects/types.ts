@@ -1,3 +1,5 @@
+import type { AccessLevel } from "@/lib/access"
+
 /**
  * 项目：以项目为单位检索、存依据、做核对。
  *
@@ -16,7 +18,31 @@ export interface ProjectLocation {
   lng?: number
 }
 
-export type MemberRole = "lead" | "member"
+/**
+ * 项目角色（三档）：
+ * - lead   负责人：管理项目（位置、阶段、成员及每个人的权限）+ 编辑内容
+ * - editor 可编辑：浏览 + 编辑内容（指标、依据清单、标注、项目文件）
+ * - viewer 仅浏览：只能看和下载
+ * 管理员不必是成员，也拥有全部权限。
+ */
+export type MemberRole = "lead" | "editor" | "viewer"
+
+export const MEMBER_ROLES: Record<MemberRole, { label: string; desc: string; access: AccessLevel }> = {
+  lead: { label: "负责人", desc: "管理项目和成员权限", access: "edit" },
+  editor: { label: "可编辑", desc: "浏览 + 编辑内容", access: "edit" },
+  viewer: { label: "仅浏览", desc: "只能查看、下载", access: "view" },
+}
+/** 当前用户在某个项目里的权限摘要（服务端算好交给界面；接口仍会再校验） */
+export interface ProjectAccess {
+  role: MemberRole | null
+  admin: boolean
+  /** 编辑内容：指标、依据清单、标注、文件 */
+  canEdit: boolean
+  /** 管理项目：位置、阶段、成员及其权限 */
+  canManage: boolean
+}
+
+export const MEMBER_ROLE_ORDER: MemberRole[] = ["lead", "editor", "viewer"]
 
 export interface ProjectMember {
   email: string

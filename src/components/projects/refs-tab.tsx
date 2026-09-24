@@ -10,7 +10,7 @@ import { REF_CATEGORIES, projectRefsStore, removeProjectRef } from "@/lib/projec
 import { getSource } from "@/lib/sources/mock"
 
 /** 依据清单：按分类列出成员加进来的内容，点击回到原文 */
-export function RefsTab({ projectId }: { projectId: string }) {
+export function RefsTab({ projectId, canEdit }: { projectId: string; canEdit: boolean }) {
   const [all] = useLocalStore(projectRefsStore)
   const refs = all.filter((r) => r.projectId === projectId)
 
@@ -46,15 +46,17 @@ export function RefsTab({ projectId }: { projectId: string }) {
                     <div className="flex items-start gap-2">
                       <p className="flex-1 text-sm font-medium">{r.title}</p>
                       {s?.status && s.status !== "current" && <SourceStatusTag status={s.status} />}
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-md:opacity-100"
-                        onClick={() => removeProjectRef(r.id)}
-                        aria-label="从清单移除"
-                      >
-                        <Trash2Icon />
-                      </Button>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-md:opacity-100"
+                          onClick={() => removeProjectRef(r.id)}
+                          aria-label="从清单移除"
+                        >
+                          <Trash2Icon />
+                        </Button>
+                      )}
                     </div>
                     {r.text && <p className="mt-1 border-l-2 border-border-strong pl-3 font-serif text-[15px] leading-relaxed">{r.text}</p>}
                     {r.note && <p className="mt-1.5 text-sm text-muted-foreground">备注：{r.note}</p>}

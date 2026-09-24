@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowRightIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { ArrowRightIcon, EyeIcon, PlusIcon, Trash2Icon, UsersIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,11 @@ import { FormatMatrix } from "@/components/drive/format-matrix"
 import { UploadRow } from "@/components/files/upload-row"
 import type { UploadItem } from "@/components/files/use-uploader"
 import { SourceStatusTag } from "@/components/source/source-meta"
+import { LevelSelect, RoleSelect } from "@/components/share/access-menu"
+import { ShareDialog } from "@/components/share/share-dialog"
+import type { AccessLevel } from "@/lib/access"
+import type { Share } from "@/lib/drive/shares"
+import type { MemberRole } from "@/lib/projects/types"
 import type { ChatMode } from "@/lib/chat/modes"
 import { Composer } from "@/components/chat/composer"
 import { SourceCard } from "@/components/source/source-card"
@@ -38,6 +43,10 @@ export function DesignGallery() {
   const [view, setView] = useState<"text" | "original">("text")
   const [sw, setSw] = useState(true)
   const [otp, setOtp] = useState("")
+  const [role, setRole] = useState<MemberRole>("editor")
+  const [level, setLevel] = useState<AccessLevel>("view")
+  const [shareOpen, setShareOpen] = useState(false)
+  const [shares, setShares] = useState<Share[]>(DEMO_SHARES)
   const noop = { peekId: null, openPeek: () => {}, onSwitchMode: () => {} }
   const s1 = getSource("gb50352-2019")!
   const s2 = getSource("report-church-of-light")!
@@ -342,6 +351,59 @@ export function DesignGallery() {
         <p className="mt-3 text-center text-xs text-muted-foreground">示例：已校准（每单位 10 mm）· 两条测量线（右边一条为选中状态）· 一个框选 · 一个编号标记</p>
       </Section>
 
+      <Section
+        id="access"
+        title="11. 权限：三档角色与共享"
+        note="项目和个人文件用同一套词：仅浏览 / 浏览 + 编辑；“管理”（改信息、调权限）只属于负责人、文件主人和管理员。下拉里每档都带一句“能做什么”。"
+      >
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <State label="项目角色（可改）">
+            <RoleSelect value={role} onChange={setRole} label="示例成员的权限" />
+          </State>
+          <State label="最后一位负责人（降级被禁用）">
+            <RoleSelect value="lead" onChange={() => {}} label="示例负责人" disabledRoles={["editor", "viewer"]} disabledHint="项目至少要有一位负责人" />
+          </State>
+          <State label="访客视角（只读）">
+            <RoleSelect value="viewer" label="示例成员的权限" readOnly />
+          </State>
+          <State label="共享档位">
+            <LevelSelect value={level} onChange={setLevel} label="共享档位" />
+          </State>
+          <State label="查看器 · 仅浏览">
+            <span className="flex h-7 items-center gap-1 text-xs text-muted-foreground">
+              <EyeIcon className="size-3.5" />
+              仅浏览，不能标注
+            </span>
+          </State>
+          <State label="目录树 · 共享标记">
+            <span className="flex items-center gap-3 text-sm">
+              参考图片
+              <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
+                <UsersIcon className="size-3" />2
+              </span>
+            </span>
+          </State>
+          <State label="共享面板（示例，不会真的保存）">
+            <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+              <UsersIcon />
+              打开共享面板
+            </Button>
+          </State>
+        </div>
+        <ShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          item={{ id: "me/demo@studio.cn/ref", name: "参考图片", folder: true }}
+          shares={shares}
+          onSharesChange={setShares}
+          demo
+          directory={[
+            { email: "li.na@studio.cn", name: "李娜" },
+            { email: "wang.lei@studio.cn", name: "王磊" },
+          ]}
+        />
+      </Section>
+
       <p className="flex items-center gap-1 text-sm text-muted-foreground">
         设计决策记录见仓库 <code className="font-mono">docs/design-journal/</code>
         <ArrowRightIcon className="size-3.5" />
@@ -349,6 +411,10 @@ export function DesignGallery() {
     </div>
   )
 }
+
+const DEMO_SHARES: Share[] = [
+  { id: "demo1", owner: "demo@studio.cn", itemId: "me/demo@studio.cn/ref", itemName: "参考图片", folder: true, grantee: "li.na@studio.cn", level: "edit", createdAt: 0 },
+]
 
 const base: Omit<UploadItem, "id" | "name" | "stage"> = {
   size: 160 * 1024 * 1024,

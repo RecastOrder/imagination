@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeftIcon, FolderTreeIcon } from "lucide-react"
+import { ArrowLeftIcon, EyeIcon, FolderTreeIcon, PencilIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ import { toast } from "@/components/ui/toast"
 import { useLocalStore } from "@/hooks/use-local-store"
 import { runChecks } from "@/lib/projects/checks"
 import { projectRefsStore } from "@/lib/projects/refs"
-import type { Project } from "@/lib/projects/types"
+import { MEMBER_ROLES, type Project, type ProjectAccess } from "@/lib/projects/types"
 import { cn } from "@/lib/utils"
 import { ChecksTab } from "./checks-tab"
 import { MembersTab } from "./members-tab"
@@ -27,11 +27,11 @@ type Tab = "overview" | "refs" | "checks" | "members" | "tools"
  */
 export function ProjectView({
   initial,
-  canEdit,
+  access,
   directory,
 }: {
   initial: Project
-  canEdit: boolean
+  access: ProjectAccess
   directory: { email: string; name: string }[]
 }) {
   const [project, setProject] = useState(initial)
@@ -82,7 +82,8 @@ export function ProjectView({
           <span className="text-sm text-muted-foreground">
             {project.location.city} {project.location.district}
           </span>
-          <Button asChild variant="outline" size="sm" className="ml-auto">
+          <AccessBadge access={access} className="ml-auto" />
+          <Button asChild variant="outline" size="sm">
             <Link href={`/browse?f=${encodeURIComponent(`proj/${project.id}`)}`}>
               <FolderTreeIcon />
               项目文件
@@ -114,13 +115,30 @@ export function ProjectView({
         </nav>
 
         <div className="py-6">
-          {tab === "overview" && <OverviewTab project={project} canEdit={canEdit} onSave={save} />}
-          {tab === "refs" && <RefsTab projectId={project.id} />}
-          {tab === "checks" && <ChecksTab key={JSON.stringify(project.metrics)} project={project} canEdit={canEdit} onSave={save} />}
-          {tab === "members" && <MembersTab project={project} canEdit={canEdit} directory={directory} onSave={save} />}
+          {tab === "overview" && <OverviewTab project={project} canEdit={access.canManage} onSave={save} />}
+          {tab === "refs" && <RefsTab projectId={project.id} canEdit={access.canEdit} />}
+          {tab === "checks" && <ChecksTab key={JSON.stringify(project.metrics)} project={project} canEdit={access.canEdit} onSave={save} />}
+          {tab === "members" && <MembersTab project={project} access={access} directory={directory} onSave={save} />}
           {tab === "tools" && <ToolsTab project={project} />}
         </div>
       </div>
     </div>
+  )
+}
+
+/** 我在这个项目里的权限：放在标题行，进来就知道自己能做什么 */
+function AccessBadge({ access, className }: { access: ProjectAccess; className?: string }) {
+  const label = access.role ? MEMBER_ROLES[access.role].label : "管理员"
+  const title = access.canManage
+    ? "可以管理项目、调整成员权限"
+    : access.canEdit
+      ? "可以浏览和编辑内容；项目信息和成员由负责人管理"
+      : "只能查看和下载；需要修改请联系项目负责人"
+  return (
+    <span title={title} className={cn("flex items-center gap-1.5 text-sm text-muted-foreground", className)}>
+      {access.canEdit ? <PencilIcon className="size-3.5" /> : <EyeIcon className="size-3.5" />}
+      我的权限：<span className="font-medium text-foreground">{label}</span>
+      {access.admin && access.role && <span>（管理员）</span>}
+    </span>
   )
 }

@@ -17,7 +17,7 @@ const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2]
  * - 中文 PDF 需要字符映射表（cmaps），已随应用一起提供
  * - 高清屏按设备像素比渲染，文字不会发虚
  */
-export function PdfViewer({ name, blob, fileId, banner }: ViewerProps & { banner?: React.ReactNode }) {
+export function PdfViewer({ name, blob, fileId, banner, readOnly }: ViewerProps & { banner?: React.ReactNode }) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(2)
@@ -28,6 +28,7 @@ export function PdfViewer({ name, blob, fileId, banner }: ViewerProps & { banner
     fileId,
     fileName: name,
     unit: "pt",
+    readOnly,
     onJump: (m) => scrollRef.current?.querySelector(`[data-page="${m.page}"]`)?.scrollIntoView({ block: "center" }),
   })
 

@@ -31,7 +31,9 @@ export function AddToProject({
   onOpenChange?: (o: boolean) => void
   onAdded?: () => void
 }) {
-  const { projects, email } = useAccount()
+  const { projects: all, email } = useAccount()
+  // 只列出我能编辑的项目：“仅浏览”的项目不能往里加内容
+  const projects = all.filter((p) => p.canEdit)
   const [last] = useLocalStore(lastProjectPref)
   const [open, setOpenState] = useState(false)
   const [projectId, setProjectId] = useState<string | null>(null)
@@ -58,7 +60,9 @@ export function AddToProject({
           加入项目依据清单
         </p>
         {projects.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">你还没有参与任何项目。</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {all.length === 0 ? "你还没有参与任何项目。" : "你参与的项目都是“仅浏览”权限，不能加入内容。需要时请联系项目负责人。"}
+          </p>
         ) : (
           <form
             className="mt-3 space-y-3"

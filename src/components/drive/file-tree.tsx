@@ -60,6 +60,7 @@ export function FileTree({
   childrenOf,
   loading,
   errors,
+  badge,
 }: {
   roots: DriveNode[]
   selectedId: string | null
@@ -70,6 +71,8 @@ export function FileTree({
   childrenOf: (node: DriveNode) => DriveNode[] | undefined
   loading: Set<string>
   errors: Record<string, string>
+  /** 行尾的小标记（如“已共享给 2 人”） */
+  badge?: (node: DriveNode) => React.ReactNode
 }) {
   const [filter, setFilter] = useState("")
   const [focusId, setFocusId] = useState<string | null>(null)
@@ -203,6 +206,7 @@ export function FileTree({
               {depth === 0 && node.type === "folder" && node.hint && (
                 <span className="shrink-0 text-[11px] font-normal text-muted-foreground">{node.hint}</span>
               )}
+              {badge?.(node)}
             </li>
           )
         })}

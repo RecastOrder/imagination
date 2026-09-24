@@ -9,8 +9,11 @@ import {
   FolderIcon,
   FolderTreeIcon,
   InfoIcon,
+  EyeIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
+  PencilIcon,
+  UsersIcon,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +24,10 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useMinWidth } from "@/hooks/use-media-query"
 import { listArchive } from "@/lib/drive/archive"
 import { FORMATS, SUPPORT_LABEL, formatOf } from "@/lib/drive/formats"
-import { SPACES, allRoots, rootsFor, spaceOf, type Space } from "@/lib/drive/sample-tree"
+import { SHARED_ROOT_ID, SPACES, allRoots, ownerOf, rootsFor, sharedRoot, spaceOf, type Space } from "@/lib/drive/sample-tree"
+import { bestLevel, covers, type Share } from "@/lib/drive/shares"
+import type { AccessLevel } from "@/lib/access"
+import { ShareDialog } from "@/components/share/share-dialog"
 import type { ProjectSummary } from "@/lib/drive/projects"
 import type { DriveFile, DriveNode } from "@/lib/drive/types"
 import { formatBytes } from "@/lib/files/checksum"
@@ -42,7 +48,25 @@ import { SourceViewer } from "./viewers/source-viewer"
  * 选中的文件记在网址里（?f=…），可以分享链接、用浏览器后退。
  * 平台资料库、个人项目文件、压缩包内部都用同一棵树、同一套查看器。
  */
-export function DriveView({ projects }: { projects: ProjectSummary[] }) {
+export function DriveView({
+  email,
+  projects,
+  mine,
+  sharedWithMe,
+  myShares: initialShares,
+  directory,
+}: {
+  email: string
+  projects: ProjectSummary[]
+  /** 我的文件 */
+  mine: DriveNode
+  /** 别人共享给我的（节点 + 共享记录 + 主人名字） */
+  sharedWithMe: { node: DriveNode; share: Share; ownerName: string }[]
+  /** 我共享出去的 */
+  myShares: Share[]
+  /** 可以共享给谁（单位成员，不含自己） */
+  directory: { email: string; name: string }[]
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -50,15 +74,18 @@ export function DriveView({ projects }: { projects: ProjectSummary[] }) {
   // 当前空间：选中的文件属于哪个空间就是哪个；没选文件时看网址参数，默认先看项目
   const space: Space =
     spaceOf(selectedId) ?? (params.get("space") as Space | null) ?? (projects.length ? "project" : "public")
-  const roots = useMemo(() => rootsFor(space, projects), [space, projects])
-  const everything = useMemo(() => allRoots(projects), [projects])
+  const mineRoots = useMemo(() => [mine, sharedRoot(sharedWithMe.map((x) => x.node))], [mine, sharedWithMe])
+  const roots = useMemo(() => rootsFor(space, projects, mineRoots), [space, projects, mineRoots])
+  const everything = useMemo(() => allRoots(projects, mineRoots), [projects, mineRoots])
+  const [myShares, setMyShares] = useState(initialShares)
+  const [sharing, setSharing] = useState(false)
   const isLg = useMinWidth("lg")
   const treePanel = usePanelRef()
   const [treeCollapsed, setTreeCollapsed] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [info, setInfo] = useState(false)
   // 默认展开每个空间的根目录
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(["lib", "me", ...projects.map((p) => `proj/${p.id}`)]))
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(["lib", mine.id, SHARED_ROOT_ID, ...projects.map((p) => `proj/${p.id}`)]))
   const [zipKids, setZipKids] = useState<Record<string, DriveNode[]>>({})
   const [loading, setLoading] = useState<Set<string>>(new Set())
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -162,6 +189,44 @@ export function DriveView({ projects }: { projects: ProjectSummary[] }) {
     if (n) crumbs.unshift(n)
   }
 
+  /**
+   * 我对某个节点的权限：
+   * 公共资料 → 仅浏览；项目 → 按我在项目里的档位；我的 → 自己的是编辑，共享来的按共享档位。
+   */
+  const accessFor = (id: string): AccessLevel | null => {
+    const sp = spaceOf(id)
+    if (sp === "public") return "view"
+    if (sp === "project") return projects.find((p) => p.id === id.split("/")[1])?.access ?? null
+    const owner = ownerOf(id)
+    if (!owner) return "view"
+    if (owner === email) return "edit"
+    return bestLevel(sharedWithMe.filter((x) => covers(x.share, id)).map((x) => x.share.level))
+  }
+  const access = selectedId ? accessFor(selectedId) : null
+  // 能共享的：自己“我的”里面的文件 / 文件夹（根目录和压缩包内部除外）
+  const shareable =
+    selected && selected.type !== "source" && ownerOf(selected.id) === email && selected.id !== mine.id && !selected.id.includes("!")
+
+  // 目录树右侧的小标记：我共享出去的显示人数；共享给我的显示主人和档位
+  const sharedCount = (id: string) => new Set(myShares.filter((s) => s.itemId === id).map((s) => s.grantee)).size
+  const treeBadge = (n: DriveNode) => {
+    const inbound = sharedWithMe.find((x) => x.node.id === n.id)
+    if (inbound)
+      return (
+        <span className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground" title={`${inbound.ownerName} 共享 · ${inbound.share.level === "edit" ? "浏览 + 编辑" : "仅浏览"}`}>
+          {inbound.ownerName}
+          {inbound.share.level === "view" ? <EyeIcon className="size-3" aria-label="仅浏览" /> : <PencilIcon className="size-3" aria-label="可编辑" />}
+        </span>
+      )
+    const c = ownerOf(n.id) === email ? sharedCount(n.id) : 0
+    return c > 0 ? (
+      <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-muted-foreground" title={`已共享给 ${c} 人`}>
+        <UsersIcon className="size-3" />
+        {c}
+      </span>
+    ) : null
+  }
+
   const switchSpace = (v: Space) => {
     const next = new URLSearchParams()
     next.set("space", v)
@@ -193,6 +258,7 @@ export function DriveView({ projects }: { projects: ProjectSummary[] }) {
       childrenOf={childrenOf}
       loading={loading}
       errors={errors}
+      badge={treeBadge}
     />
         </div>
       )}
@@ -234,6 +300,18 @@ export function DriveView({ projects }: { projects: ProjectSummary[] }) {
             </span>
           ))}
         </nav>
+        {access === "view" && selected && selected.type !== "source" && (
+          <Badge variant="outline" className="mr-1" title="可以查看和下载，不能标注或修改">
+            <EyeIcon />
+            仅浏览
+          </Badge>
+        )}
+        {shareable && (
+          <Button variant="ghost" size="sm" onClick={() => setSharing(true)} title="共享给同事">
+            <UsersIcon />
+            共享{sharedCount(selected.id) > 0 && <span className="text-muted-foreground tabular-nums">{sharedCount(selected.id)}</span>}
+          </Button>
+        )}
         {selected?.type === "file" && selected.url && !selected.zip && (
           <Button asChild variant="ghost" size="icon-sm" aria-label="下载">
             <a href={selected.url} download={selected.name} title="下载">
@@ -256,7 +334,7 @@ export function DriveView({ projects }: { projects: ProjectSummary[] }) {
           ) : selected.type === "source" ? (
             <SourceViewer sourceId={selected.sourceId} />
           ) : (
-            <ViewerHost file={selected} archiveUrl={archiveUrl} />
+            <ViewerHost file={selected} archiveUrl={archiveUrl} readOnly={access !== "edit"} />
           )}
         </div>
         {info && selected?.type === "file" && <InfoPanel file={selected} path={crumbs.slice(0, -1).map((c) => c.name).join(" / ")} />}
@@ -296,6 +374,16 @@ export function DriveView({ projects }: { projects: ProjectSummary[] }) {
         </ResizableGroup>
       ) : (
         content
+      )}
+      {shareable && (
+        <ShareDialog
+          open={sharing}
+          onOpenChange={setSharing}
+          item={{ id: selected.id, name: selected.name, folder: selected.type === "folder" }}
+          shares={myShares}
+          onSharesChange={setMyShares}
+          directory={directory}
+        />
       )}
       <Sheet open={drawer && !isLg} onOpenChange={setDrawer}>
         <SheetContent side="left" className="w-[85vw] max-w-80 p-0" showClose={false}>
@@ -400,7 +488,7 @@ function EmptyState() {
         <FolderTreeIcon className="size-8 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">从左侧目录选择一个文件</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          上方切换三个空间：公共（资料库）、项目（你参与的项目）、我的（仅自己可见）。用 ↑↓ 移动，→ 展开，Enter 打开。打开 PDF、图片、Office 后可以标注和测量。
+          上方切换三个空间：公共（资料库）、项目（你参与的项目）、我的（自己的文件和同事共享给你的）。用 ↑↓ 移动，→ 展开，Enter 打开。打开 PDF、图片、Office 后可以标注和测量。
         </p>
         {[
           ["现在就能直接打开", groups.full, "neutral"],

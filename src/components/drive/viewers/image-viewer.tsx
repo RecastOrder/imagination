@@ -11,12 +11,12 @@ import type { ViewerProps } from "./types"
  * 图片：“适应窗口”看全貌，“原始大小”看细节（可滚动平移）。
  * 同样可以标注和测量（页面单位是图片原始像素，校准后换算成毫米）。
  */
-export function ImageViewer({ fileId, name, src }: ViewerProps) {
+export function ImageViewer({ fileId, name, src, readOnly }: ViewerProps) {
   const [mode, setMode] = useState<"fit" | "actual">("fit")
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null)
   const [shown, setShown] = useState(0)
   const imgRef = useRef<HTMLImageElement>(null)
-  const annot = useAnnotator({ fileId, fileName: name, unit: "px" })
+  const annot = useAnnotator({ fileId, fileName: name, unit: "px", readOnly })
 
   // 图片实际显示的宽度：用来换算标注的线宽和字号
   useEffect(() => {

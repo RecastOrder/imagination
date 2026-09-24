@@ -10,9 +10,9 @@ export const PROJECT_SEED: Project[] = [
     location: { province: "上海市", city: "上海市", district: "徐汇区", address: "示例路 88 号地块（示例）", lat: 31.18, lng: 121.43 },
     members: [
       { email: "zhang.ming@studio.cn", role: "lead" },
-      { email: "li.na@studio.cn", role: "member" },
-      { email: "wang.lei@studio.cn", role: "member" },
-      { email: "chen.jing@studio.cn", role: "member" },
+      { email: "li.na@studio.cn", role: "editor" },
+      { email: "wang.lei@studio.cn", role: "editor" },
+      { email: "chen.jing@studio.cn", role: "viewer" },
     ],
     conditions: [
       { key: "far", label: "容积率", op: "<=", value: 2.5, source: "规划条件（示例）" },
@@ -31,8 +31,8 @@ export const PROJECT_SEED: Project[] = [
     location: { province: "浙江省", city: "杭州市", district: "西湖区", address: "示例地块（示例）", lat: 30.26, lng: 120.13 },
     members: [
       { email: "zhao.min@studio.cn", role: "lead" },
-      { email: "zhang.ming@studio.cn", role: "member" },
-      { email: "liu.yang@studio.cn", role: "member" },
+      { email: "zhang.ming@studio.cn", role: "editor" },
+      { email: "liu.yang@studio.cn", role: "editor" },
     ],
     conditions: [
       { key: "far", label: "容积率", op: "<=", value: 1.2, source: "规划条件（示例）" },

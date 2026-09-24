@@ -14,8 +14,8 @@ interface AccountContextValue {
   isAdmin: boolean
   /** 各功能是否可用（同样只用于界面显示） */
   features: Record<Feature, boolean>
-  /** 我参与的项目（“加入项目”时可选） */
-  projects: { id: string; name: string }[]
+  /** 我参与的项目；canEdit = 我能往里加内容（“加入项目”只列这些） */
+  projects: { id: string; name: string; canEdit: boolean }[]
   prefs: AccountPrefs
   setPref: <K extends keyof AccountPrefs>(key: K, value: AccountPrefs[K]) => void
   logout: () => Promise<void>
@@ -43,7 +43,7 @@ export function AccountProvider({
   roleLabel: string
   isAdmin: boolean
   features: Record<Feature, boolean>
-  projects: { id: string; name: string }[]
+  projects: AccountContextValue["projects"]
   initialPrefs: AccountPrefs
   children: React.ReactNode
 }) {

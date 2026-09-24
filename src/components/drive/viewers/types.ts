@@ -5,4 +5,6 @@ export interface ViewerProps {
   name: string
   blob: Blob
   src: string
+  /** 仅浏览权限：不能标注、测量 */
+  readOnly?: boolean
 }
