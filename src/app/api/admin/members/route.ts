@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 
-import type { RoleId } from "@/lib/auth/permissions"
+import { ROLES, type RoleId } from "@/lib/auth/permissions"
 import { getCurrentUser } from "@/lib/server/current-user"
+import { EMAIL_CONFIGURED, inviteEmail, sendEmail } from "@/lib/server/email"
 import { inviteMember, isAdmin, listMembers, revokeInvite, updateMember } from "@/lib/server/members"
 import { normalizeEmail } from "@/lib/server/otp"
 
@@ -28,8 +29,16 @@ export async function POST(req: Request) {
   if (!email) return NextResponse.json({ error: "请输入有效的邮箱地址" }, { status: 400 })
   const r = inviteMember({ email, name: body.name, role: (body.role as RoleId) ?? "standard", invitedBy: a.user.email })
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
-  // 演示：不真正发送邀请邮件，返回登录链接（打开后邮箱已填好）
-  return NextResponse.json({ member: r.member, inviteLink: `/login?email=${encodeURIComponent(email)}` })
+  // 邀请链接：打开后邮箱已填好。配置了 Resend 就发邀请邮件，否则只返回链接由管理员转发
+  const inviteLink = `/login?email=${encodeURIComponent(email)}`
+  const origin = process.env.APP_URL ?? new URL(req.url).origin
+  const emailed = EMAIL_CONFIGURED
+    ? await sendEmail({
+        to: email,
+        ...inviteEmail({ inviter: a.user.member.name, link: origin + inviteLink, roleLabel: ROLES[r.member.role].label }),
+      })
+    : false
+  return NextResponse.json({ member: r.member, inviteLink, emailed })
 }
 
 /** 修改成员（角色、单独调整、停用） */

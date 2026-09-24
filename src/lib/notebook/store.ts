@@ -25,6 +25,8 @@ export interface Note {
   sourceId?: string
   sectionId?: string
   page?: number
+  /** 来自文件浏览（标注、测量）：回链到那个文件 */
+  fileRef?: { id: string; name: string }
   createdAt: number
 }
 

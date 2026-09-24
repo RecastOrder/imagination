@@ -17,6 +17,7 @@ import { FiltersBlock } from "@/components/blocks/filters-block"
 import { IdeaBlock } from "@/components/blocks/idea-block"
 import { NoticeBlock } from "@/components/blocks/notice-block"
 import { ModeSwitch } from "@/components/chat/mode-switch"
+import { AnnotationLayer } from "@/components/drive/annotate/annotation-layer"
 import { FormatMatrix } from "@/components/drive/format-matrix"
 import { UploadRow } from "@/components/files/upload-row"
 import type { UploadItem } from "@/components/files/use-uploader"
@@ -311,6 +312,34 @@ export function DesignGallery() {
         note="“可直接打开”的格式在浏览器里完成，不需要服务器；其余格式会显示说明页和下载按钮，而不是空白或报错（逐级降级）。"
       >
         <FormatMatrix />
+      </Section>
+
+      <Section
+        id="markup"
+        title="10. 标注与测量"
+        note="红色（--markup）专门用于批注和测量，沿用设计院“红笔改图”的习惯；它不是强调色，也不表示错误。线宽和文字不随缩放变粗变大。"
+      >
+        <div className="relative mx-auto aspect-[3/2] max-w-xl overflow-hidden rounded-lg border bg-paper">
+          <AnnotationLayer
+            page={1}
+            pageW={600}
+            pageH={400}
+            displayScale={1}
+            mmPerUnit={10}
+            tool="browse"
+            selectedId="d2"
+            onSelect={() => {}}
+            onCreate={() => {}}
+            onCalibrate={() => {}}
+            marks={[
+              { id: "d1", kind: "measure", page: 1, x1: 60, y1: 60, x2: 540, y2: 60, text: "" },
+              { id: "d2", kind: "measure", page: 1, x1: 40, y1: 90, x2: 40, y2: 360, text: "" },
+              { id: "d3", kind: "rect", page: 1, x: 120, y: 130, w: 220, h: 150, text: "这里再推敲" },
+              { id: "d4", kind: "pin", page: 1, x: 450, y: 220, text: "" },
+            ]}
+          />
+        </div>
+        <p className="mt-3 text-center text-xs text-muted-foreground">示例：已校准（每单位 10 mm）· 两条测量线（右边一条为选中状态）· 一个框选 · 一个编号标记</p>
       </Section>
 
       <p className="flex items-center gap-1 text-sm text-muted-foreground">

@@ -16,6 +16,7 @@ import type { ViewerProps } from "./viewers/types"
 const loading = () => <Skeleton className="m-8 h-[60vh]" />
 // PDF.js 和 three.js 体积大，只在真正打开这类文件时才下载（代码分割）
 const PdfViewer = dynamic(() => import("./viewers/pdf-viewer").then((m) => m.PdfViewer), { ssr: false, loading })
+const OfficeViewer = dynamic(() => import("./viewers/office-viewer").then((m) => m.OfficeViewer), { ssr: false, loading })
 const ModelViewer = dynamic(() => import("./viewers/model-viewer").then((m) => m.ModelViewer), { ssr: false, loading })
 
 /**
@@ -24,6 +25,7 @@ const ModelViewer = dynamic(() => import("./viewers/model-viewer").then((m) => m
  */
 const REGISTRY: Partial<Record<ViewerKey, ComponentType<ViewerProps>>> = {
   pdf: PdfViewer,
+  office: OfficeViewer,
   image: ImageViewer,
   markdown: TextViewer,
   text: TextViewer,
@@ -71,5 +73,5 @@ export function ViewerHost({ file, archiveUrl }: { file: DriveFile; archiveUrl?:
   if (!Viewer) return <PendingViewer name={file.name} size={file.size} href={file.url} />
   if (!state || state.id !== file.id) return <Skeleton className="m-8 h-[60vh]" />
   if ("error" in state) return <p className="p-8 text-center text-sm text-destructive">{state.error}</p>
-  return <Viewer key={file.id} name={file.name} blob={state.blob} src={state.src} />
+  return <Viewer key={file.id} fileId={file.id} name={file.name} blob={state.blob} src={state.src} />
 }

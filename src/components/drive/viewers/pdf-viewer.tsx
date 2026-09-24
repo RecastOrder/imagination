@@ -6,6 +6,7 @@ import type { PDFDocumentProxy } from "pdfjs-dist"
 
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAnnotator } from "../annotate/annotator"
 import type { ViewerProps } from "./types"
 
 const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -16,12 +17,19 @@ const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2]
  * - 中文 PDF 需要字符映射表（cmaps），已随应用一起提供
  * - 高清屏按设备像素比渲染，文字不会发虚
  */
-export function PdfViewer({ blob }: ViewerProps) {
+export function PdfViewer({ name, blob, fileId, banner }: ViewerProps & { banner?: React.ReactNode }) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(2)
   const [page, setPage] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // 标注与测量：页面单位是 PDF 的“点”（100% 缩放时的尺寸）
+  const annot = useAnnotator({
+    fileId,
+    fileName: name,
+    unit: "pt",
+    onJump: (m) => scrollRef.current?.querySelector(`[data-page="${m.page}"]`)?.scrollIntoView({ block: "center" }),
+  })
 
   useEffect(() => {
     let alive = true
@@ -85,17 +93,24 @@ export function PdfViewer({ blob }: ViewerProps) {
         <Button variant="ghost" size="icon-sm" disabled={zoom === ZOOMS.length - 1} onClick={() => setZoom((z) => z + 1)} aria-label="放大">
           <PlusIcon />
         </Button>
+        <span className="mx-2 h-4 w-px bg-border" aria-hidden />
+        {annot.toolbar}
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
           第 {page} / {doc.numPages} 页
         </span>
       </div>
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto bg-surface-sunken">
-        <div className="flex flex-col items-center gap-4 p-6">
-          {Array.from({ length: doc.numPages }, (_, i) => (
-            <PdfPage key={`${i}-${zoom}`} doc={doc} n={i + 1} scale={ZOOMS[zoom]} root={scrollRef} />
-          ))}
+      {banner}
+      <div className="flex min-h-0 flex-1">
+        <div ref={scrollRef} className="min-w-0 flex-1 overflow-auto bg-surface-sunken">
+          <div className="flex w-max min-w-full flex-col items-center gap-4 p-6">
+            {Array.from({ length: doc.numPages }, (_, i) => (
+              <PdfPage key={`${i}-${zoom}`} doc={doc} n={i + 1} scale={ZOOMS[zoom]} root={scrollRef} overlay={annot.layer} />
+            ))}
+          </div>
         </div>
+        {annot.panel}
       </div>
+      {annot.dialog}
     </div>
   )
 }
@@ -105,11 +120,14 @@ function PdfPage({
   n,
   scale,
   root,
+  overlay,
 }: {
   doc: PDFDocumentProxy
   n: number
   scale: number
   root: React.RefObject<HTMLDivElement | null>
+  /** 叠加层（标注）：参数是页码、页面宽高（100% 时的点）、当前缩放 */
+  overlay?: (page: number, w: number, h: number, displayScale: number) => React.ReactNode
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -150,10 +168,11 @@ function PdfPage({
     <div
       ref={wrapRef}
       data-page={n}
-      className="bg-paper shadow-float ring-1 ring-ink/5"
+      className="relative bg-paper shadow-float ring-1 ring-ink/5"
       style={size ? { width: size.w, height: size.h } : { width: 595 * scale, height: 842 * scale }}
     >
       <canvas ref={canvasRef} aria-label={`第 ${n} 页`} className="h-full w-full" />
+      {size && overlay?.(n, size.w / scale, size.h / scale, scale)}
     </div>
   )
 }

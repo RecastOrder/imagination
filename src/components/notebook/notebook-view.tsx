@@ -256,6 +256,18 @@ function NoteCard({ note }: { note: Note }) {
         {note.text}
       </p>
 
+      {note.fileRef && (
+        <Link
+          href={`/browse?f=${encodeURIComponent(note.fileRef.id)}`}
+          className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-md text-xs text-muted-foreground hover:text-primary"
+        >
+          <CornerDownRightIcon className="size-3.5 shrink-0" />
+          <span className="truncate">
+            {note.fileRef.name}
+            {note.page ? ` · 第 ${note.page} 页` : ""}
+          </span>
+        </Link>
+      )}
       {/* 回链：点击回到原文的对应位置 */}
       {source && (
         <Link

@@ -12,7 +12,16 @@ npm run dev        # http://localhost:3000
 | 变量 | 说明 |
 |---|---|
 | `AUTH_SECRET` | 登录 Cookie 的签名密钥，生产环境必须设置为随机长字符串 |
-| `AUTH_DEMO=off` | 关闭“验证码显示在页面上”的演示模式（接入邮件服务后） |
+| `RESEND_API_KEY` | Resend 的 API Key。配置后真正发送验证码和邀请邮件，并自动关闭“验证码显示在页面上” |
+| `RESEND_FROM` | 发件人，如 `Imagination <noreply@你的域名>`（域名需先在 Resend 后台验证） |
+| `APP_URL` | 网站地址，用于邀请邮件里的链接，如 `https://imagination.yourfirm.com` |
+| `AUTH_DEMO=on/off` | 强制开启 / 关闭“验证码显示在页面上”（默认：没配置 Resend 时开启） |
+
+服务器还需要安装（Office 预览用）：
+
+```bash
+sudo apt install libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui fonts-noto-cjk
+```
 
 | 路由 | 说明 |
 |---|---|
@@ -22,7 +31,7 @@ npm run dev        # http://localhost:3000
 | `/chat` | 对话：严谨 / 发散两种模式（记住个人偏好），引用在右侧预览 |
 | `/library` | 资料库：使用场景 + 按类型 / 地区 / 年份检索，可保存自己的视图 |
 | `/library/[id]` | 阅读模式：文本 / 原版切换、选中文字高亮 / 摘录 / 问 AI、右下角 AI 助手 |
-| `/browse` | 文件浏览：左侧目录树（可拖宽 / 收起）+ 中间查看器；PDF、图片、Markdown、CSV、Rhino 3dm、STL、ZIP 可直接打开 |
+| `/browse` | 文件浏览：公共 / 项目 / 我的三个空间；PDF、图片、Office、Markdown、CSV、Rhino 3dm、STL、ZIP 可直接打开；PDF、图片、Office 可标注和测量 |
 | `/notebook` | 笔记本：按项目收集摘录、AI 回答、备忘；可只在本笔记本范围内提问 |
 | `/files` | 我的文件：拖拽上传（分块 SHA-256 校验、秒传、断点续传）、同名自动加版本号、百度网盘导入 |
 | `/admin/members` | 成员与权限（仅管理员）：邀请工作邮箱、角色模板 + 个人调整、停用账号 |

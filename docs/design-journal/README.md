@@ -38,3 +38,4 @@
 - [005 上传、校验与百度网盘导入](./005-upload-sync.md)
 - [006 邮箱验证码登录与账户偏好](./006-login-account.md)
 - [007 文件浏览：左侧目录 + 中间阅读](./007-file-browser.md)
+- [008 三个空间、Office 预览、标注与测量](./008-spaces-office-markup.md)

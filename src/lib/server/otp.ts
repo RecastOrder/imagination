@@ -1,5 +1,7 @@
 import { createHash, randomInt } from "node:crypto"
 
+import { EMAIL_CONFIGURED, codeEmail, sendEmail } from "./email"
+
 /**
  * 邮箱验证码（演示版：存在服务器内存里，重启即清空；上线时换成 Redis 或数据库）。
  *
@@ -58,10 +60,18 @@ export function verifyCode(email: string, code: string): VerifyResult {
   return "ok"
 }
 
-/** 发送邮件。演示环境不真正发送，接入邮件服务（如阿里云邮件推送、SendGrid）后在这里实现 */
+/** 发送验证码邮件（Resend，见 email.ts）。返回是否发送成功 */
 export async function sendCodeEmail(email: string, code: string) {
-  console.info(`[auth] 验证码邮件（演示，未真正发送）→ ${email}: ${code}`)
+  return sendEmail({ to: email, ...codeEmail(code) })
 }
 
-/** 演示环境把验证码直接返回给页面显示；设置 AUTH_DEMO=off 后关闭 */
-export const DEMO_SHOW_CODE = process.env.AUTH_DEMO !== "off"
+/** 邮件发送失败时撤回验证码，让用户可以立即重试 */
+export function revokeCode(email: string) {
+  store.delete(email)
+}
+
+/**
+ * 演示模式：把验证码直接显示在登录页上。
+ * 默认：没配置 Resend 时开启，配置后关闭；也可以用 AUTH_DEMO=on / off 强制指定。
+ */
+export const DEMO_SHOW_CODE = process.env.AUTH_DEMO ? process.env.AUTH_DEMO === "on" : !EMAIL_CONFIGURED

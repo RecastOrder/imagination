@@ -15,12 +15,13 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Segmented } from "@/components/ui/segmented"
 import { ResizableGroup, ResizableHandle, ResizablePanel } from "@/components/ui/resizable"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useMinWidth } from "@/hooks/use-media-query"
 import { listArchive } from "@/lib/drive/archive"
 import { FORMATS, SUPPORT_LABEL, formatOf } from "@/lib/drive/formats"
-import { DRIVE_ROOTS } from "@/lib/drive/sample-tree"
+import { SPACES, allRoots, rootsFor, spaceOf, type Space } from "@/lib/drive/sample-tree"
 import type { DriveFile, DriveNode } from "@/lib/drive/types"
 import { formatBytes } from "@/lib/files/checksum"
 import { cn } from "@/lib/utils"
@@ -40,17 +41,23 @@ import { SourceViewer } from "./viewers/source-viewer"
  * 选中的文件记在网址里（?f=…），可以分享链接、用浏览器后退。
  * 平台资料库、个人项目文件、压缩包内部都用同一棵树、同一套查看器。
  */
-export function DriveView() {
+export function DriveView({ projectIds }: { projectIds: string[] }) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
   const selectedId = params.get("f")
+  // 当前空间：选中的文件属于哪个空间就是哪个；没选文件时看网址参数，默认先看项目
+  const space: Space =
+    spaceOf(selectedId) ?? (params.get("space") as Space | null) ?? (projectIds.length ? "project" : "public")
+  const roots = useMemo(() => rootsFor(space, projectIds), [space, projectIds])
+  const everything = useMemo(() => allRoots(projectIds), [projectIds])
   const isLg = useMinWidth("lg")
   const treePanel = usePanelRef()
   const [treeCollapsed, setTreeCollapsed] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [info, setInfo] = useState(false)
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(["p"]))
+  // 默认展开每个空间的根目录
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(["lib", "me", ...projectIds.map((id) => `proj/${id}`)]))
   const [zipKids, setZipKids] = useState<Record<string, DriveNode[]>>({})
   const [loading, setLoading] = useState<Set<string>>(new Set())
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -70,9 +77,9 @@ export function DriveView() {
         if (kids) walk(kids, n.id)
       }
     }
-    walk(DRIVE_ROOTS, null)
+    walk(everything, null)
     return map
-  }, [childrenOf])
+  }, [childrenOf, everything])
 
   const archiveUrl = useCallback(
     (archiveId: string) => {
@@ -154,9 +161,30 @@ export function DriveView() {
     if (n) crumbs.unshift(n)
   }
 
+  const switchSpace = (v: Space) => {
+    const next = new URLSearchParams()
+    next.set("space", v)
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }
+
   const tree = (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="px-2 pt-2">
+        {/* 三个空间：公共（资料库）/ 项目（我参与的）/ 我的（仅自己） */}
+        <Segmented
+          label="空间"
+          value={space}
+          onChange={switchSpace}
+          options={SPACES.map((s) => ({ value: s.value, label: s.label }))}
+          className="w-full [&>button]:flex-1 [&>button]:justify-center"
+        />
+      </div>
+      {space === "project" && roots.length === 0 ? (
+        <p className="px-4 py-8 text-center text-sm text-muted-foreground">你还没有加入任何项目。请联系项目负责人把你加入项目成员。</p>
+      ) : (
+        <div className="min-h-0 flex-1">
     <FileTree
-      roots={DRIVE_ROOTS}
+      roots={roots}
       selectedId={selectedId}
       expanded={expanded}
       onToggle={toggle}
@@ -165,6 +193,9 @@ export function DriveView() {
       loading={loading}
       errors={errors}
     />
+        </div>
+      )}
+    </div>
   )
 
   const toggleTree = () => {
@@ -234,8 +265,12 @@ export function DriveView() {
 
   return (
     <div className="h-full">
-      {/* 桌面：可拖宽、可收起的分栏；手机：目录放进抽屉。用 CSS 断点切换，服务端首屏就是对的 */}
-      <div className="hidden h-full lg:block">
+      {/*
+        内容区只渲染一份（否则查看器会加载两次、快捷键触发两次）。
+        这个页面依赖网址参数，本来就在浏览器端渲染，按屏幕宽度用 JS 选布局不会出现首屏闪烁。
+        桌面：可拖宽、可收起的分栏；手机：目录放进抽屉。
+      */}
+      {isLg ? (
         <ResizableGroup orientation="horizontal">
           <ResizablePanel
             id="tree"
@@ -258,8 +293,9 @@ export function DriveView() {
             {content}
           </ResizablePanel>
         </ResizableGroup>
-      </div>
-      <div className="h-full lg:hidden">{content}</div>
+      ) : (
+        content
+      )}
       <Sheet open={drawer && !isLg} onOpenChange={setDrawer}>
         <SheetContent side="left" className="w-[85vw] max-w-80 p-0" showClose={false}>
           <SheetTitle className="border-b px-4 py-3 text-sm">目录</SheetTitle>
@@ -363,12 +399,12 @@ function EmptyState() {
         <FolderTreeIcon className="size-8 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">从左侧目录选择一个文件</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          项目文件和平台资料库都在同一个目录里。用 ↑↓ 移动，→ 展开，Enter 打开。
+          上方切换三个空间：公共（资料库）、项目（你参与的项目）、我的（仅自己可见）。用 ↑↓ 移动，→ 展开，Enter 打开。打开 PDF、图片、Office 后可以标注和测量。
         </p>
         {[
           ["现在就能直接打开", groups.full, "neutral"],
-          ["第二期支持（服务器转换）", groups.phase2, "outline"],
-          ["第三期评估 / 仅显示信息", groups.later, "outline"],
+          ["后续支持", groups.phase2, "outline"],
+          ["不在线预览（下载后用本机软件打开）", groups.later, "outline"],
         ].map(([title, list, variant]) => (
           <section key={title as string} className="mt-6">
             <h3 className="mb-2 text-xs font-medium text-muted-foreground">{title as string}</h3>

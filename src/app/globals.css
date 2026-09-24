@@ -81,6 +81,8 @@
   --success: var(--green-600);
   --warning: var(--amber-600);
   --highlight: var(--marker-200); /* 阅读高亮：沿用纸质书荧光笔的习惯，不占用强调色 */
+  --markup: var(--red-500); /* 批注 / 测量：沿用设计院“红笔改图”的习惯 */
+  --markup-foreground: var(--stone-0);
   --paper: var(--stone-0); /* 原版 PDF 的纸张：模拟印刷品，暗色下只略微压暗，不反色 */
   --ink: var(--stone-900);
 
@@ -131,6 +133,8 @@
   --success: var(--green-400);
   --warning: var(--amber-400);
   --highlight: var(--marker-800);
+  --markup: var(--red-400);
+  --markup-foreground: var(--stone-950);
   --paper: var(--stone-200);
   --ink: var(--stone-950);
 
@@ -174,6 +178,8 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-highlight: var(--highlight);
+  --color-markup: var(--markup);
+  --color-markup-foreground: var(--markup-foreground);
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-border: var(--border);

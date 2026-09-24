@@ -29,6 +29,7 @@ export function InviteSheet({
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [link, setLink] = useState<string | null>(null)
+  const [emailed, setEmailed] = useState(false)
 
   const reset = () => {
     setEmail("")
@@ -51,6 +52,7 @@ export function InviteSheet({
       if (!r.ok) return setError(data.error ?? "邀请失败")
       onInvited(data.member)
       setLink(`${window.location.origin}${data.inviteLink}`)
+      setEmailed(!!data.emailed)
     } catch {
       setError("网络连接失败，请重试")
     } finally {
@@ -76,7 +78,9 @@ export function InviteSheet({
               已邀请 {email}
             </p>
             <p className="text-sm text-muted-foreground">
-              演示环境不会真正发出邀请邮件。把下面的链接发给对方，打开后邮箱已填好，点“登录”收验证码即可。
+              {emailed
+                ? "邀请邮件已发出。你也可以把下面的链接直接发给对方，打开后邮箱已填好。"
+                : "邮件服务尚未配置，没有发出邀请邮件。请把下面的链接发给对方，打开后邮箱已填好，点“登录”收验证码即可。"}
             </p>
             <div className="flex gap-2">
               <Input readOnly value={link} className="font-mono text-xs" onFocus={(e) => e.target.select()} />

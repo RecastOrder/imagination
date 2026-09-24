@@ -42,3 +42,6 @@ next-env.d.ts
 
 # 查看器静态资源（由 scripts/copy-vendor.mjs 从 node_modules 复制）
 /public/vendor
+
+# Office 预览转换缓存
+/.cache
