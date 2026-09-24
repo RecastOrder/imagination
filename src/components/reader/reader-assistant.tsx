@@ -22,11 +22,16 @@ export function ReaderAssistant({
   open,
   onOpenChange,
   onJump,
+  quote,
+  onClearQuote,
 }: {
   source: Source
   open: boolean
   onOpenChange: (open: boolean) => void
   onJump: (sectionId: string) => void
+  /** 从正文选中后“问 AI”带过来的引用 */
+  quote?: string | null
+  onClearQuote?: () => void
 }) {
   const isLg = useMinWidth("lg")
   const { messages, send, stop, busy } = useMockChat((q) => ({
@@ -34,11 +39,15 @@ export function ReaderAssistant({
     blocks: [
       {
         type: "text",
-        content: `（演示回答）关于“${q.slice(0, 20)}”，本文在「${source.sections.at(-1)?.title}」一节有相关论述 [1]，点击编号可跳转到对应段落。`,
+        content: `（演示回答）关于“${q.slice(0, 30)}”，本文在「${source.sections.at(-1)?.title}」一节有相关论述 [1]，点击编号可跳转到对应段落。`,
         citations: [source.id],
       },
     ],
   }))
+  const ask = (text: string) => {
+    send(quote ? `关于这段：“${quote.slice(0, 40)}${quote.length > 40 ? "…" : ""}”\n${text}` : text)
+    onClearQuote?.()
+  }
 
   // 在阅读页里，引用编号的作用是“跳转到段落”，而不是打开预览
   const ctx = { peekId: null, openPeek: () => onJump(source.sections.at(-1)!.id) }
@@ -60,7 +69,7 @@ export function ReaderAssistant({
               <button
                 key={p}
                 type="button"
-                onClick={() => send(p)}
+                onClick={() => ask(p)}
                 className="block w-full cursor-pointer rounded-lg border bg-surface px-3 py-2 text-left text-sm hover:border-border-strong"
               >
                 {p}
@@ -74,14 +83,28 @@ export function ReaderAssistant({
       <div className="p-3">
         <Composer
           size="md"
-          onSend={send}
+          onSend={ask}
           onStop={stop}
           busy={busy}
-          placeholder="就这份资料提问…"
+          autoFocus={!!quote}
+          placeholder={quote ? "对这段文字提问…" : "就这份资料提问…"}
           context={
-            <Badge variant="outline" className="max-w-full">
-              <span className="truncate">当前文档：{source.title}</span>
-            </Badge>
+            <>
+              <Badge variant="outline" className="max-w-full">
+                <span className="truncate">当前文档：{source.title}</span>
+              </Badge>
+              {quote && (
+                <button
+                  type="button"
+                  onClick={onClearQuote}
+                  title="移除引用"
+                  className="flex w-full cursor-pointer items-start gap-2 rounded-md border-l-2 border-primary bg-surface-sunken px-2.5 py-1.5 text-left font-serif text-[13px] leading-relaxed"
+                >
+                  <span className="line-clamp-2 flex-1">{quote}</span>
+                  <XIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                </button>
+              )}
+            </>
           }
         />
       </div>

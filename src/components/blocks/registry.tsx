@@ -2,9 +2,12 @@
 
 import type { ComponentType } from "react"
 
+import type { ChatMode } from "@/lib/chat/modes"
 import type { Block, BlockType } from "@/lib/chat/types"
 import { FiltersBlock } from "./filters-block"
+import { IdeaBlock } from "./idea-block"
 import { ImagesBlock } from "./images-block"
+import { NoticeBlock } from "./notice-block"
 import { SourcesBlock } from "./sources-block"
 import { TextBlock } from "./text-block"
 
@@ -12,6 +15,8 @@ import { TextBlock } from "./text-block"
 export interface BlockContext {
   peekId: string | null
   openPeek: (id: string, sec?: string) => void
+  /** 切换对话模式并重问上一个问题（提示块里的按钮用） */
+  onSwitchMode?: (mode: ChatMode) => void
 }
 
 export type BlockProps<T extends BlockType> = {
@@ -25,6 +30,8 @@ const REGISTRY: { [T in BlockType]: ComponentType<BlockProps<T>> } = {
   sources: SourcesBlock,
   images: ImagesBlock,
   filters: FiltersBlock,
+  idea: IdeaBlock,
+  notice: NoticeBlock,
 }
 
 export function BlockRenderer({ block, ctx }: { block: Block; ctx: BlockContext }) {

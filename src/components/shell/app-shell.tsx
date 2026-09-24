@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { MenuIcon } from "lucide-react"
 
@@ -26,7 +26,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isMd = useMinWidth("md")
   const isLg = useMinWidth("lg")
   const is2xl = useMinWidth("2xl", false)
-  const peekOpen = useSearchParams().has("peek")
+  // 预览面板是否打开：由一个小组件单独读取网址参数，
+  // 避免整个外壳因为读网址参数而放弃服务端渲染（否则首屏是空白）
+  const [peekOpen, setPeekOpen] = useState(false)
   const [userCollapsed, setUserCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const router = useRouter()
@@ -43,30 +45,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey)
   }, [router])
 
-  let variant: SidebarVariant | null
-  if (!isMd) variant = null
-  else if (!isLg) variant = "rail"
-  else variant = userCollapsed || (peekOpen && !is2xl) ? "rail" : "expanded"
+  // 手机上“显示 / 隐藏侧栏”交给 CSS 媒体查询决定（服务端渲染时就正确，不会先闪一下桌面布局）；
+  // JS 只负责桌面上“展开 / 图标栏”的选择
+  const variant: SidebarVariant = !isLg ? "rail" : userCollapsed || (peekOpen && !is2xl) ? "rail" : "expanded"
 
   return (
     <TooltipProvider>
+      <Suspense>
+        <PeekWatcher onChange={setPeekOpen} />
+      </Suspense>
       <div className="flex h-dvh overflow-hidden">
-        {variant && <Sidebar variant={variant} onToggle={isLg ? () => setUserCollapsed((v) => !v) : undefined} />}
+        <div className="hidden md:flex">
+          <Sidebar variant={variant} onToggle={isLg ? () => setUserCollapsed((v) => !v) : undefined} />
+        </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {!isMd && (
-            <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-2">
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(true)}
-                className="flex size-9 cursor-pointer items-center justify-center rounded-md hover:bg-accent"
-                aria-label="打开菜单"
-              >
-                <MenuIcon className="size-5" />
-              </button>
-              <Logo className="text-[15px]" />
-            </header>
-          )}
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-2 md:hidden">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="flex size-9 cursor-pointer items-center justify-center rounded-md hover:bg-accent"
+              aria-label="打开菜单"
+            >
+              <MenuIcon className="size-5" />
+            </button>
+            <Logo className="text-[15px]" />
+          </header>
           <main className="min-h-0 flex-1">{children}</main>
         </div>
       </div>
@@ -79,4 +83,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sheet>
     </TooltipProvider>
   )
+}
+
+function PeekWatcher({ onChange }: { onChange: (open: boolean) => void }) {
+  const open = useSearchParams().has("peek")
+  useEffect(() => onChange(open), [open, onChange])
+  return null
 }

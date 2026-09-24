@@ -85,3 +85,13 @@
 
 `src/components/shell/peek-layout.tsx`、`src/hooks/use-peek.ts`、`src/components/source/*`、
 `src/components/library/*`、`src/components/reader/*`、`src/components/blocks/filters-block.tsx`
+
+## 更新（v0.2）：资料库的“使用场景”
+
+资料库顶部新增场景条：**全部 / 查规范 / 找构造做法 / 研读期刊 / 看案例**，以及自己保存的视图。
+场景本质是预设好的筛选条件，底下仍是同一个库——不按“技术 / 设计”一刀切，而是按“我现在要干什么”来分。
+
+![](img/v02-l1-scenes.png)
+
+资料新增**权威等级**（1 规范规章 · 2 图集 · 3 期刊论文专著 · 4 案例报道 · 5 个人笔记）与**规范状态**（现行 / 已被替代 / 已废止），
+供严谨模式筛选和提示使用，见 [002](./002-chat-modes.md)。

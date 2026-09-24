@@ -47,6 +47,8 @@
   --green-400: oklch(0.74 0.13 150);
   --amber-600: oklch(0.62 0.13 75);
   --amber-400: oklch(0.8 0.13 80);
+  --marker-200: oklch(0.935 0.075 95); /* 荧光笔黄：阅读高亮专用 */
+  --marker-800: oklch(0.42 0.07 85);
 
   /* 尺寸类原始值 */
   --radius: 0.625rem; /* 10px，其余圆角由它推导 */
@@ -74,8 +76,13 @@
   --accent-foreground: var(--stone-900);
 
   --destructive: var(--red-500);
+  --destructive-foreground: var(--stone-0);
+  --overlay: oklch(0.155 0.004 70 / 0.4); /* 抽屉、弹窗背后的遮罩 */
   --success: var(--green-600);
   --warning: var(--amber-600);
+  --highlight: var(--marker-200); /* 阅读高亮：沿用纸质书荧光笔的习惯，不占用强调色 */
+  --paper: var(--stone-0); /* 原版 PDF 的纸张：模拟印刷品，暗色下只略微压暗，不反色 */
+  --ink: var(--stone-900);
 
   --border: var(--stone-200);
   --border-strong: var(--stone-300);
@@ -119,8 +126,13 @@
   --accent-foreground: var(--stone-50);
 
   --destructive: var(--red-400);
+  --destructive-foreground: var(--stone-950);
+  --overlay: oklch(0 0 0 / 0.55);
   --success: var(--green-400);
   --warning: var(--amber-400);
+  --highlight: var(--marker-800);
+  --paper: var(--stone-200);
+  --ink: var(--stone-950);
 
   --border: var(--stone-800);
   --border-strong: var(--stone-700);
@@ -157,8 +169,13 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-overlay: var(--overlay);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-highlight: var(--highlight);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-input: var(--input);

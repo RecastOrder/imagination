@@ -14,6 +14,7 @@ import { filterChips, filtersToSearch, matchSource, parseFilters } from "@/lib/s
 import { SOURCES } from "@/lib/sources/mock"
 import type { SourceFilters } from "@/lib/sources/types"
 import { Facets } from "./facets"
+import { SceneBar } from "./scene-bar"
 
 /**
  * 资料库（检索入口）。适合“我知道要找什么”：某地某年的某本规范、某篇报道。
@@ -81,6 +82,9 @@ export function LibraryView() {
               </div>
             </SheetContent>
           </Sheet>
+        </div>
+        <div className="mx-auto mt-3 max-w-5xl">
+          <SceneBar filters={filters} onChange={setFilters} />
         </div>
       </header>
 

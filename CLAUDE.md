@@ -6,7 +6,7 @@
 
 ## 设计系统规则（必须遵守）
 
-- 分层：L0 令牌（`src/app/globals.css`）→ L1 基础组件（`src/components/ui`）→ L2 业务组件（`src/components/{source,chat,blocks,library,reader}`）→ L3 骨架（`src/components/shell`）→ L4 页面（`src/app`）。下层不能依赖上层。
+- 分层：L0 令牌（`src/app/globals.css`）→ L1 基础组件（`src/components/ui`）→ L2 业务组件（`src/components/{source,chat,blocks,library,reader,notebook,files,admin}`）→ L3 骨架（`src/components/shell`）→ L4 页面（`src/app`）。下层不能依赖上层。
 - 页面和组件里**禁止写原始色值**（#hex、oklch()、`text-[#…]`、Tailwind 调色板色如 `bg-stone-200`），只用语义令牌（`bg-surface`、`text-muted-foreground`、`bg-primary` 等）。
 - 强调色（primary，陶土色）只用于三处：主操作、当前位置/选中、焦点/引用。
 - 组件外观变化通过 `variant` / `size`（cva）表达，页面不临时覆盖组件样式。
@@ -14,6 +14,10 @@
 - 预览面板状态放 URL（`?peek=资料id`），见 `src/hooks/use-peek.ts`。
 - 每个新组件都要考虑：默认 / 悬停 / 选中 / 加载 / 空 / 错误 / 禁用 / 访客（无权限），并在 `/design` 样张页补上。
 - 响应式断点：<768 手机（抽屉）/ 768–1024 平板 / ≥1024 桌面（分栏）。
+- “手机 / 桌面显示哪套布局”优先用 CSS 断点（`hidden md:flex`），不要只靠 JS 判断——否则服务端首屏会先闪一下错误布局。
+- 只有真正依赖网址参数的页面才包 `<Suspense>`（配 `PageSkeleton`），不要在外壳层读网址参数，否则整个应用区首屏空白。
+- 资料的权威等级（`src/lib/sources/kinds.ts`）：1 规范规章 · 2 图集 · 3 期刊论文 · 4 案例 · 5 个人笔记。严谨模式只引用 1–2。
+- 演示阶段的持久化用 `src/lib/local-store.ts`（localStorage），接后端时替换它的读写即可。
 
 ## 学习陪伴模式（用户希望边做边学）
 

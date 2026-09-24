@@ -24,7 +24,7 @@ const buttonVariants = cva(
         /** 工具栏、列表里的轻量操作 */
         ghost: "hover:bg-accent hover:text-accent-foreground",
         /** 破坏性操作：删除等 */
-        destructive: "bg-destructive text-white hover:bg-destructive/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

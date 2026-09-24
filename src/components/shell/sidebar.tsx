@@ -3,9 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  BookMarkedIcon,
+  FolderIcon,
   LibraryIcon,
   MessageSquareIcon,
   PaletteIcon,
+  UsersIcon,
   PanelLeftIcon,
   SearchIcon,
   SquarePenIcon,
@@ -30,6 +33,13 @@ export type SidebarVariant = "expanded" | "rail" | "drawer"
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/chat", label: "对话", icon: MessageSquareIcon },
   { href: "/library", label: "资料库", icon: LibraryIcon },
+  { href: "/notebook", label: "笔记本", icon: BookMarkedIcon },
+  { href: "/files", label: "我的文件", icon: FolderIcon },
+]
+
+/** 管理类入口：只有有对应权限的人才会看到（演示中默认当前用户是管理员） */
+const ADMIN_NAV: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/admin/members", label: "成员与权限", icon: UsersIcon },
   { href: "/design", label: "设计系统", icon: PaletteIcon },
 ]
 
@@ -101,6 +111,19 @@ export function Sidebar({
       <div className={cn("mt-4 flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
         {!rail && <SectionLabel>工作区</SectionLabel>}
         {NAV.map((item) => (
+          <SidebarItem
+            key={item.href}
+            {...item}
+            rail={rail}
+            active={pathname === item.href || pathname.startsWith(item.href + "/")}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </div>
+
+      <div className={cn("mt-4 flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
+        {!rail && <SectionLabel>管理</SectionLabel>}
+        {ADMIN_NAV.map((item) => (
           <SidebarItem
             key={item.href}
             {...item}

@@ -1,4 +1,4 @@
-import type { Source } from "./types"
+import type { Source, SourceSection } from "./types"
 
 /**
  * 演示数据。标题和基本信息参考真实资料，
@@ -12,7 +12,18 @@ const placeholder = (topic: string): string[] => [
   "【示例占位文本】长文阅读的关键不是字大，而是行宽和行距：一行太长眼睛容易串行，太短则频繁换行打断节奏。",
 ]
 
-export const SOURCES: Source[] = [
+type RawSource = Omit<Source, "sections" | "pages"> & { sections: Omit<SourceSection, "page">[] }
+
+/** 演示用：给每一节分配一个原版页码（每节 3 页） */
+function withPages(raw: RawSource[]): Source[] {
+  return raw.map((s) => ({
+    ...s,
+    pages: s.sections.length * 3 + 1,
+    sections: s.sections.map((sec, i) => ({ ...sec, page: 2 + i * 3 })),
+  }))
+}
+
+export const SOURCES: Source[] = withPages([
   {
     id: "gb50352-2019",
     kind: "standard",
@@ -24,6 +35,7 @@ export const SOURCES: Source[] = [
     tags: ["通用", "术语", "层高", "日照"],
     summary: "民用建筑设计的通用技术要求，涵盖基地、总平面、建筑物设计、室内环境等方面。",
     access: "public",
+    status: "current",
     sections: [
       { id: "s1", title: "1 总则", paragraphs: placeholder("总则") },
       { id: "s2", title: "4 规划控制", paragraphs: placeholder("规划控制") },
@@ -42,6 +54,7 @@ export const SOURCES: Source[] = [
     tags: ["防火", "疏散", "防火分区"],
     summary: "工业与民用建筑防火设计的基本规定，包括防火分区、安全疏散、耐火等级等。",
     access: "member",
+    status: "current",
     sections: [
       { id: "s1", title: "1 总则", paragraphs: placeholder("总则") },
       { id: "s2", title: "5 民用建筑", paragraphs: placeholder("民用建筑防火") },
@@ -59,6 +72,8 @@ export const SOURCES: Source[] = [
     tags: ["住宅", "套型", "日照"],
     summary: "住宅建筑的套内空间、共用部分、室内环境与建筑设备等设计要求。",
     access: "member",
+    // 演示“已被替代”状态：严谨模式下会提示用户核对新版
+    status: "superseded",
     sections: [
       { id: "s1", title: "5 套内空间", paragraphs: placeholder("套内空间") },
       { id: "s2", title: "7 室内环境", paragraphs: placeholder("室内环境") },
@@ -74,6 +89,7 @@ export const SOURCES: Source[] = [
     tags: ["住宅", "地方标准", "日照"],
     summary: "上海地区住宅设计的地方性补充要求，常与国家标准对照使用。",
     access: "member",
+    status: "current",
     sections: [
       { id: "s1", title: "总则", paragraphs: placeholder("地方标准总则") },
       { id: "s2", title: "日照与间距", paragraphs: placeholder("日照与间距") },
@@ -157,7 +173,7 @@ export const SOURCES: Source[] = [
       { id: "s2", title: "方法比较", paragraphs: placeholder("方法比较") },
     ],
   },
-]
+])
 
 export function getSource(id: string): Source | undefined {
   return SOURCES.find((s) => s.id === id)

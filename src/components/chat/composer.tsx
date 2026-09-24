@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react"
 import { ArrowUpIcon, PaperclipIcon, SquareIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import type { ChatMode } from "@/lib/chat/modes"
 import { cn } from "@/lib/utils"
+import { ModeSwitch } from "./mode-switch"
 
 /**
  * 输入框（Composer）。状态：空闲 / 输入中 / 生成中（按钮变“停止”）/ 禁用。
@@ -18,6 +20,8 @@ export function Composer({
   size = "lg",
   context,
   autoFocus,
+  mode,
+  onModeChange,
 }: {
   onSend: (text: string) => void
   onStop?: () => void
@@ -27,6 +31,9 @@ export function Composer({
   /** 输入框上方的上下文标签，如“当前文档：xxx” */
   context?: React.ReactNode
   autoFocus?: boolean
+  /** 传入则显示“严谨 | 发散”切换 */
+  mode?: ChatMode
+  onModeChange?: (m: ChatMode) => void
 }) {
   const [value, setValue] = useState("")
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -81,6 +88,7 @@ export function Composer({
         <Button type="button" variant="ghost" size="icon-sm" aria-label="添加资料" title="添加资料（演示）">
           <PaperclipIcon />
         </Button>
+        {mode && onModeChange && <ModeSwitch value={mode} onChange={onModeChange} />}
         <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">Shift + Enter 换行</span>
         {busy ? (
           <Button type="button" size="icon-sm" variant="secondary" onClick={onStop} aria-label="停止生成">

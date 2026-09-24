@@ -32,3 +32,7 @@
 
 - [000 地基：令牌、组件分层、页面骨架](./000-foundation.md)
 - [001 资料阅览：问 → 找 → 预览 → 阅读](./001-reading-flow.md)
+- [002 对话的两种模式：严谨 / 发散](./002-chat-modes.md)
+- [003 阅读器（原版 / 文本）与笔记本](./003-reader-notebook.md)
+- [004 账户与权限](./004-accounts-permissions.md)
+- [005 上传、校验与百度网盘导入](./005-upload-sync.md)

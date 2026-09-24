@@ -12,7 +12,18 @@ export interface SourceSection {
   id: string
   title: string
   paragraphs: string[]
+  /** 在原版 PDF 中的起始页码：文本视图和原版视图靠它互相对应 */
+  page: number
 }
+
+/** 规范的效力状态：严谨模式下必须显示 */
+export type SourceStatus = "current" | "superseded" | "abolished"
+
+/**
+ * 权威等级：决定资料能否作为“有出处的结论”被引用。
+ * 1 规范规章 · 2 图集标准做法 · 3 期刊论文 · 4 案例报道图片 · 5 个人笔记
+ */
+export type AuthorityLevel = 1 | 2 | 3 | 4 | 5
 
 export interface Source {
   id: string
@@ -28,6 +39,10 @@ export interface Source {
   summary: string
   /** 访客只能看到 public 资料的摘要，正文需要登录 */
   access: AccessLevel
+  /** 仅规范、规章有 */
+  status?: SourceStatus
+  /** 原版 PDF 总页数 */
+  pages: number
   sections: SourceSection[]
 }
 

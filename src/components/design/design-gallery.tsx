@@ -8,8 +8,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Meter } from "@/components/ui/meter"
+import { Segmented } from "@/components/ui/segmented"
+import { Switch } from "@/components/ui/switch"
 import { Citation } from "@/components/blocks/citation"
 import { FiltersBlock } from "@/components/blocks/filters-block"
+import { IdeaBlock } from "@/components/blocks/idea-block"
+import { NoticeBlock } from "@/components/blocks/notice-block"
+import { ModeSwitch } from "@/components/chat/mode-switch"
+import { UploadRow } from "@/components/files/upload-row"
+import type { UploadItem } from "@/components/files/use-uploader"
+import { SourceStatusTag } from "@/components/source/source-meta"
+import type { ChatMode } from "@/lib/chat/modes"
 import { Composer } from "@/components/chat/composer"
 import { SourceCard } from "@/components/source/source-card"
 import { getSource } from "@/lib/sources/mock"
@@ -21,6 +31,10 @@ import { getSource } from "@/lib/sources/mock"
  */
 export function DesignGallery() {
   const [active, setActive] = useState<string | null>("gb50352-2019")
+  const [mode, setMode] = useState<ChatMode>("rigorous")
+  const [view, setView] = useState<"text" | "original">("text")
+  const [sw, setSw] = useState(true)
+  const noop = { peekId: null, openPeek: () => {}, onSwitchMode: () => {} }
   const s1 = getSource("gb50352-2019")!
   const s2 = getSource("report-church-of-light")!
 
@@ -197,6 +211,69 @@ export function DesignGallery() {
         </div>
       </Section>
 
+      <Section
+        id="v02"
+        title="7. v0.2 新增：模式、联想、提示、上传"
+        note="严谨与发散的回答在视觉上必须能一眼区分；上传的每个阶段都要让用户知道“现在在干什么、出错了怎么办”。"
+      >
+        <div className="grid gap-6 md:grid-cols-2">
+          <State label="分段控件 · 模式切换（记住个人偏好）">
+            <ModeSwitch value={mode} onChange={setMode} />
+          </State>
+          <State label="分段控件 · 视图切换">
+            <Segmented label="视图" value={view} onChange={setView} options={[{ value: "text", label: "文本" }, { value: "original", label: "原版" }]} />
+          </State>
+          <State label="有出处的正文（实线引用）">
+            <p className="text-[15px] leading-[1.75]">
+              住宅日照需同时满足国家标准和地方标准
+              <Citation n={1} sourceId="gb50096-2011" onOpen={() => {}} />。
+            </p>
+          </State>
+          <State label="联想块（虚线 + 标签，没有权威出处）">
+            <IdeaBlock block={{ type: "idea", content: "南侧逐层退台，让后排楼的底层也能“看到”太阳。" }} ctx={noop} />
+          </State>
+          <State label="提示 · 未找到出处（可换模式重问）">
+            <NoticeBlock
+              block={{ type: "notice", tone: "info", title: "权威资料中没有找到可引用的内容", content: "不会在没有出处的情况下作答。", action: { label: "换成发散模式再问一次", switchTo: "divergent" } }}
+              ctx={noop}
+            />
+          </State>
+          <State label="提示 · 引用的规范已被替代">
+            <NoticeBlock block={{ type: "notice", tone: "warning", title: "GB 50096-2011 已被替代", content: "用于施工图前请核对新版条文。" }} ctx={noop} />
+          </State>
+          <State label="规范状态标签">
+            <p className="flex gap-4 text-xs">
+              <SourceStatusTag status="current" />
+              <SourceStatusTag status="superseded" />
+              <SourceStatusTag status="abolished" />
+            </p>
+          </State>
+          <State label="阅读高亮（荧光笔色，独立令牌）">
+            <p className="font-serif text-[17px] leading-[1.9]">
+              长文阅读的关键是<mark className="rounded-[2px] bg-highlight px-0.5 text-inherit">行宽和行距</mark>。
+            </p>
+          </State>
+          <State label="开关（立即生效的设置）">
+            <label className="flex items-center gap-3 text-sm">
+              <Switch checked={sw} onCheckedChange={setSw} />
+              AI 对话 {sw ? "已开通" : "未开通"}
+            </label>
+          </State>
+          <State label="用量条（>85% 变警示色）">
+            <div className="space-y-3">
+              <Meter value={21} max={50} label="存储" />
+              <Meter value={46} max={50} label="存储" />
+            </div>
+          </State>
+        </div>
+        <p className="mt-8 mb-2 font-mono text-xs text-muted-foreground">上传行 · 各阶段状态</p>
+        <ul className="divide-y rounded-xl border bg-surface">
+          {UPLOAD_SAMPLES.map((it) => (
+            <UploadRow key={it.id} item={it} onPause={() => {}} onResume={() => {}} onRemove={() => {}} />
+          ))}
+        </ul>
+      </Section>
+
       <p className="flex items-center gap-1 text-sm text-muted-foreground">
         设计决策记录见仓库 <code className="font-mono">docs/design-journal/</code>
         <ArrowRightIcon className="size-3.5" />
@@ -204,6 +281,26 @@ export function DesignGallery() {
     </div>
   )
 }
+
+const base: Omit<UploadItem, "id" | "name" | "stage"> = {
+  size: 160 * 1024 * 1024,
+  origin: "local",
+  chunksTotal: 40,
+  hashed: 40,
+  chunkHashes: [],
+  transferred: 0,
+  retries: 0,
+  fingerprint: "3f2a9d6c1b8e7f4a5d2c9b6e3a0f7d4c1b8e5a2f9c6d3b0e7a4f1c8d5b2e9a6f",
+}
+const UPLOAD_SAMPLES: UploadItem[] = [
+  { ...base, id: "a", name: "总平面-v5.dwg", stage: "hashing", hashed: 14, fingerprint: undefined },
+  { ...base, id: "b", name: "立面模型.3dm", stage: "uploading", transferred: 23, speed: 24, retries: 1, lastRetryChunk: 7 },
+  { ...base, id: "c", name: "效果图合集.zip", stage: "paused", resumeStage: "uploading", transferred: 12 },
+  { ...base, id: "d", name: "GB 50016-2014.pdf", stage: "fetching", origin: "baidu", transferred: 9, speed: 5.6 },
+  { ...base, id: "e", name: "平屋面构造.pdf", stage: "instant" },
+  { ...base, id: "f", name: "立面参数化-v4.gh", stage: "done" },
+  { ...base, id: "g", name: "扫描件.pdf", stage: "error", error: "网络中断，已上传的块会保留，可以继续" },
+]
 
 function Section({ id, title, note, children }: { id: string; title: string; note: string; children: React.ReactNode }) {
   return (
