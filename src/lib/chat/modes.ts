@@ -1,7 +1,5 @@
 import { LightbulbIcon, ScaleIcon, type LucideIcon } from "lucide-react"
 
-import { createLocalStore } from "@/lib/local-store"
-
 /**
  * 对话的两种回答模式。
  * - rigorous 严谨：只用权威等级 1–2 的资料，每个结论必须有出处，找不到就明说
@@ -23,6 +21,3 @@ export const CHAT_MODES: Record<ChatMode, { label: string; short: string; desc: 
     icon: LightbulbIcon,
   },
 }
-
-/** 个人偏好：记住上次选的模式，下次新建对话时沿用（以后存到账户设置里） */
-export const chatModePref = createLocalStore<ChatMode>("pref:chat-mode", "rigorous")

@@ -20,4 +20,5 @@
 | `lib/sources/mock.ts` | 资料检索 / 详情接口，含权威等级、规范状态、段落 ↔ 页码映射 |
 | `lib/notebook/store.ts` | 笔记本、笔记、高亮的增删改查 |
 | `components/files/use-uploader.ts` 的上传部分 | 分块上传：查重（指纹）→ 上传块（带块哈希）→ 合并校验；百度网盘 OAuth + 拉取任务 |
-| `lib/auth/permissions.ts` | 登录、角色模板、成员权限；**所有接口在服务端校验权限** |
+| `lib/auth/permissions.ts` | 角色模板、成员权限；**所有接口在服务端校验权限** |
+| `lib/server/otp.ts`、`lib/server/prefs.ts`（内存） | 验证码存 Redis、偏好存数据库；`sendCodeEmail` 接邮件服务 |

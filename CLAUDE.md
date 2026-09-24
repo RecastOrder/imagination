@@ -6,7 +6,7 @@
 
 ## 设计系统规则（必须遵守）
 
-- 分层：L0 令牌（`src/app/globals.css`）→ L1 基础组件（`src/components/ui`）→ L2 业务组件（`src/components/{source,chat,blocks,library,reader,notebook,files,admin}`）→ L3 骨架（`src/components/shell`）→ L4 页面（`src/app`）。下层不能依赖上层。
+- 分层：L0 令牌（`src/app/globals.css`）→ L1 基础组件（`src/components/ui`）→ L2 业务组件（`src/components/{source,chat,blocks,library,reader,notebook,files,admin,account}`）→ L3 骨架（`src/components/shell`）→ L4 页面（`src/app`）。下层不能依赖上层。
 - 页面和组件里**禁止写原始色值**（#hex、oklch()、`text-[#…]`、Tailwind 调色板色如 `bg-stone-200`），只用语义令牌（`bg-surface`、`text-muted-foreground`、`bg-primary` 等）。
 - 强调色（primary，陶土色）只用于三处：主操作、当前位置/选中、焦点/引用。
 - 组件外观变化通过 `variant` / `size`（cva）表达，页面不临时覆盖组件样式。
@@ -18,6 +18,10 @@
 - 只有真正依赖网址参数的页面才包 `<Suspense>`（配 `PageSkeleton`），不要在外壳层读网址参数，否则整个应用区首屏空白。
 - 资料的权威等级（`src/lib/sources/kinds.ts`）：1 规范规章 · 2 图集 · 3 期刊论文 · 4 案例 · 5 个人笔记。严谨模式只引用 1–2。
 - 演示阶段的持久化用 `src/lib/local-store.ts`（localStorage），接后端时替换它的读写即可。
+- 登录：邮箱验证码（`src/app/api/auth/*`），会话是签名的 httpOnly Cookie（`src/lib/server/session.ts`）。`src/proxy.ts` 拦截未登录访问；**每个接口仍须自己调用 `getCurrentUser()` 校验**。
+- 账户级偏好（如对话模式）存服务端 `src/lib/server/prefs.ts`，前端通过 `useAccount()` 读写；不要再用 localStorage 存账户偏好。
+- `src/lib/server/*` 只能在服务端使用（接口、服务端组件、proxy）。
+- 文件：同名不同内容自动递增版本（`resolveVersion`，`src/lib/files/store.ts`），同名同内容不重复保存。
 
 ## 学习陪伴模式（用户希望边做边学）
 

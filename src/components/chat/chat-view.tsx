@@ -2,9 +2,9 @@
 
 import { BookMarkedIcon, ImageIcon, LibraryIcon, ScaleIcon, type LucideIcon } from "lucide-react"
 
-import { useLocalStore } from "@/hooks/use-local-store"
+import { useAccount } from "@/components/account/account-provider"
 import { usePeek } from "@/hooks/use-peek"
-import { CHAT_MODES, chatModePref, type ChatMode } from "@/lib/chat/modes"
+import { CHAT_MODES, type ChatMode } from "@/lib/chat/modes"
 import { Composer } from "./composer"
 import { Thread } from "./thread"
 import { useMockChat } from "./use-mock-chat"
@@ -24,8 +24,10 @@ const EXAMPLES: { icon: LucideIcon; title: string; prompt: string }[] = [
 export function ChatView() {
   const { messages, send, stop, busy } = useMockChat()
   const { peekId, openPeek } = usePeek()
-  // 模式是个人偏好：切换后记住，下次新建对话沿用
-  const [mode, setMode] = useLocalStore(chatModePref)
+  // 模式是账户偏好：保存在服务器上，换电脑登录也沿用
+  const { prefs, setPref } = useAccount()
+  const mode = prefs.chatMode
+  const setMode = (m: ChatMode) => setPref("chatMode", m)
   const ask = (text: string) => send(text, mode)
 
   const lastQuestion = [...messages].reverse().find((m) => m.role === "user")?.blocks[0]

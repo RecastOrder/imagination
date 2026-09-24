@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { CHUNK_SIZE, chunkCount, hashFile } from "@/lib/files/checksum"
-import { filesStore, type FileOrigin } from "@/lib/files/store"
+import { filesStore, resolveVersion, type FileOrigin } from "@/lib/files/store"
 
 /**
  * 上传队列（演示版）。
@@ -48,8 +48,10 @@ export interface UploadItem {
   lastRetryChunk?: number
   speed?: number
   error?: string
-  /** 结果说明，例如“云盘里已有这个文件” */
+  /** 结果说明，例如“云盘里已有这个文件”“已保存为 v2” */
   note?: string
+  /** 保存后的版本号 */
+  version?: number
 }
 
 const CONCURRENCY = 2
@@ -78,15 +80,16 @@ export function useUploader() {
 
   const finish = useCallback((id: string, instant = false) => {
     const it = get(id)
-    // 同名且内容相同：已经在云盘里了，不重复添加
-    if (filesStore.read().some((f) => f.fingerprint === it.fingerprint && f.name === it.name)) {
-      update(id, { stage: "instant", note: "云盘中已有同名且内容相同的文件，未重复保存" })
+    const v = resolveVersion(filesStore.read(), it.name, it.fingerprint ?? "")
+    if (v.kind === "duplicate") {
+      update(id, { stage: "instant", version: v.version, note: `云盘中已有同名且内容相同的文件（v${v.version}），未重复保存` })
       return
     }
     filesStore.write((fs) => [
       {
         id: `f${Date.now().toString(36)}${seq++}`,
         name: it.name,
+        version: v.version,
         size: it.size,
         fingerprint: it.fingerprint ?? "",
         origin: it.origin,
@@ -96,7 +99,11 @@ export function useUploader() {
       },
       ...fs,
     ])
-    update(id, { stage: instant ? "instant" : "done" })
+    update(id, {
+      stage: instant ? "instant" : "done",
+      version: v.version,
+      note: v.version > 1 ? `同名文件已存在且内容不同，已保存为 v${v.version}，之前的版本保留在历史中` : undefined,
+    })
   }, [update])
 
   const runLocal = useCallback(async (id: string) => {

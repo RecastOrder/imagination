@@ -36,3 +36,4 @@
 - [003 阅读器（原版 / 文本）与笔记本](./003-reader-notebook.md)
 - [004 账户与权限](./004-accounts-permissions.md)
 - [005 上传、校验与百度网盘导入](./005-upload-sync.md)
+- [006 邮箱验证码登录与账户偏好](./006-login-account.md)

@@ -25,7 +25,7 @@ export default function HomePage() {
             </a>
           </nav>
           <Button asChild size="sm" className="ml-auto">
-            <Link href="/chat">登录</Link>
+            <Link href="/login">登录</Link>
           </Button>
         </div>
       </header>
@@ -42,7 +42,7 @@ export default function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link href="/chat">
+              <Link href="/login">
                 登录并开始使用
                 <ArrowRightIcon />
               </Link>
@@ -94,7 +94,7 @@ export default function HomePage() {
               <p className="mt-2 text-muted-foreground">访客可以查看部分公开资料的摘要，登录后可以阅读全文并使用 AI 对话。</p>
             </div>
             <Button asChild variant="outline">
-              <Link href="/chat">登录查看全部</Link>
+              <Link href="/login">登录查看全部</Link>
             </Button>
           </div>
           <ul className="mt-8 divide-y rounded-xl border bg-surface">
@@ -123,9 +123,6 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-8 text-sm text-muted-foreground sm:px-6">
           <Logo withText={false} />
           <span>Imagination · 建筑知识工作台（开发中）</span>
-          <Link href="/design" className="ml-auto hover:text-foreground">
-            设计系统
-          </Link>
         </div>
       </footer>
     </div>

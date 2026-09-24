@@ -104,6 +104,9 @@ export function UploadRow({
             </span>
             {detail && <span className="tabular-nums">{detail}</span>}
             {stage === "instant" && <span>{item.note ?? "服务器已有内容完全相同的文件，无需再传"}</span>}
+            {stage === "done" && item.version && item.version > 1 && (
+              <span className="font-medium text-foreground">已保存为 v{item.version}</span>
+            )}
             {stage === "done" && item.fingerprint && (
               <span className="font-mono" title={item.fingerprint}>
                 SHA-256 {item.fingerprint.slice(0, 16)}…

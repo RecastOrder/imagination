@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Meter } from "@/components/ui/meter"
+import { OtpInput } from "@/components/ui/otp-input"
 import { Segmented } from "@/components/ui/segmented"
 import { Switch } from "@/components/ui/switch"
 import { Citation } from "@/components/blocks/citation"
@@ -34,6 +35,7 @@ export function DesignGallery() {
   const [mode, setMode] = useState<ChatMode>("rigorous")
   const [view, setView] = useState<"text" | "original">("text")
   const [sw, setSw] = useState(true)
+  const [otp, setOtp] = useState("")
   const noop = { peekId: null, openPeek: () => {}, onSwitchMode: () => {} }
   const s1 = getSource("gb50352-2019")!
   const s2 = getSource("report-church-of-light")!
@@ -272,6 +274,34 @@ export function DesignGallery() {
             <UploadRow key={it.id} item={it} onPause={() => {}} onResume={() => {}} onRemove={() => {}} />
           ))}
         </ul>
+      </Section>
+
+      <Section
+        id="v03"
+        title="8. v0.3 新增：验证码输入、文件版本"
+        note="验证码输入满 6 位自动提交；出错时整组变红并轻微抖动（系统设置了“减少动态效果”时不抖）。同名不同内容的文件自动加版本号。"
+      >
+        <div className="grid gap-6 md:grid-cols-2">
+          <State label="验证码 · 可输入（试试粘贴 6 位数字）">
+            <OtpInput value={otp} onChange={setOtp} />
+          </State>
+          <State label="验证码 · 错误">
+            <OtpInput value="428913" onChange={() => {}} invalid />
+            <p className="mt-2 text-sm text-destructive">验证码不正确</p>
+          </State>
+          <State label="验证码 · 验证中（禁用）">
+            <OtpInput value="428913" onChange={() => {}} disabled />
+          </State>
+          <State label="文件版本标记">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              某住宅项目-总平面.dwg
+              <Badge variant="outline" className="font-mono">
+                v2
+              </Badge>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">历史版本 1 · 同名但内容不同的文件自动保存为新版本</p>
+          </State>
+        </div>
       </Section>
 
       <p className="flex items-center gap-1 text-sm text-muted-foreground">

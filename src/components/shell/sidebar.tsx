@@ -4,6 +4,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   BookMarkedIcon,
+  LogOutIcon,
+  SettingsIcon,
   FolderIcon,
   LibraryIcon,
   MessageSquareIcon,
@@ -16,6 +18,8 @@ import {
 } from "lucide-react"
 
 import { Kbd } from "@/components/ui/kbd"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useAccount } from "@/components/account/account-provider"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { Logo } from "./logo"
@@ -153,19 +157,7 @@ export function Sidebar({
       {/* 底部 */}
       <div className={cn("mt-auto flex flex-col gap-2 border-t border-sidebar-border py-3", rail ? "items-center" : "px-3")}>
         {rail ? <ThemeToggle compact /> : <ThemeToggle />}
-        <div className={cn("flex items-center gap-2.5", rail && "justify-center")}>
-          <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
-            建
-          </span>
-          {!rail && (
-            <span className="min-w-0 text-sm leading-tight">
-              <span className="block truncate font-medium">建筑师（演示）</span>
-              <Link href="/" className="text-xs text-muted-foreground hover:underline">
-                退出登录
-              </Link>
-            </span>
-          )}
-        </div>
+        <UserMenu rail={rail} onNavigate={onNavigate} />
       </div>
     </nav>
   )
@@ -221,5 +213,54 @@ function SidebarItem({
         {!rail && trailing && <span className="ml-auto">{trailing}</span>}
       </Link>
     </RailTip>
+  )
+}
+
+/** 用户菜单：头像 + 邮箱；点击展开“账户设置 / 退出登录” */
+function UserMenu({ rail, onNavigate }: { rail: boolean; onNavigate?: () => void }) {
+  const { email, logout } = useAccount()
+  const initial = email.slice(0, 1).toUpperCase()
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`账户：${email}`}
+          className={cn(
+            "flex cursor-pointer items-center gap-2.5 rounded-md text-left hover:bg-sidebar-accent",
+            rail ? "size-9 justify-center" : "-mx-1 px-1 py-1",
+          )}
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
+            {initial}
+          </span>
+          {!rail && (
+            <span className="min-w-0 flex-1 text-sm leading-tight">
+              <span className="block truncate font-medium">{email.split("@")[0]}</span>
+              <span className="block truncate text-xs text-muted-foreground">{email}</span>
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side={rail ? "right" : "top"} align="start" className="w-56">
+        <p className="truncate px-2 py-1.5 text-xs text-muted-foreground">{email}</p>
+        <Link
+          href="/settings"
+          onClick={onNavigate}
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+        >
+          <SettingsIcon className="size-4 text-muted-foreground" />
+          账户设置
+        </Link>
+        <button
+          type="button"
+          onClick={logout}
+          className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+        >
+          <LogOutIcon className="size-4 text-muted-foreground" />
+          退出登录
+        </button>
+      </PopoverContent>
+    </Popover>
   )
 }

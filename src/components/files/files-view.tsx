@@ -2,8 +2,10 @@
 
 import { useRef, useState } from "react"
 import {
+  ChevronRightIcon,
   CloudDownloadIcon,
   DatabaseIcon,
+  HistoryIcon,
   FileIcon,
   FolderSyncIcon,
   HardDriveIcon,
@@ -11,11 +13,12 @@ import {
   UploadCloudIcon,
 } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Meter } from "@/components/ui/meter"
 import { useLocalStore } from "@/hooks/use-local-store"
 import { formatBytes } from "@/lib/files/checksum"
-import { STORAGE_QUOTA_GB, filesStore, type KbState } from "@/lib/files/store"
+import { STORAGE_QUOTA_GB, filesStore, groupFiles, type FileGroup, type KbState } from "@/lib/files/store"
 import { cn } from "@/lib/utils"
 import { BaiduImportSheet } from "./baidu-import-sheet"
 import { UploadRow } from "./upload-row"
@@ -42,6 +45,7 @@ export function FilesView() {
   const dragDepth = useRef(0)
 
   const usedGB = files.reduce((s, f) => s + f.size, 0) / 1024 ** 3
+  const groups = groupFiles(files)
   const pickLocal = (list: FileList | null) => {
     if (!list?.length) return
     add(Array.from(list, (f) => ({ name: f.name, size: f.size, file: f, origin: "local" as const })))
@@ -151,34 +155,17 @@ export function FilesView() {
         )}
 
         <section className="mt-8" aria-label="文件列表">
-          <h2 className="mb-2 text-sm font-semibold">全部文件 · {files.length}</h2>
+          <h2 className="mb-2 text-sm font-semibold">全部文件 · {groups.length}</h2>
           <ul className="divide-y rounded-xl border bg-surface">
-            {files.map((f) => (
-              <li key={f.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-                <FileIcon className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{f.name}</p>
-                  <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-                    <span className="tabular-nums">{formatBytes(f.size)}</span>
-                    <span>·</span>
-                    <span className="inline-flex items-center gap-1">
-                      {f.origin === "baidu" ? <CloudDownloadIcon className="size-3" /> : <HardDriveIcon className="size-3" />}
-                      {f.origin === "baidu" ? `百度网盘${f.path ? ` ${f.path}` : ""}` : "本地上传"}
-                    </span>
-                    <span>·</span>
-                    <span className="font-mono" title={`SHA-256 ${f.fingerprint}`}>
-                      {f.fingerprint.slice(0, 10)}
-                    </span>
-                  </p>
-                </div>
-                <KbAction
-                  state={f.kb}
-                  onAdd={() => {
-                    setKb(f.id, "parsing")
-                    setTimeout(() => setKb(f.id, "ready"), 2500)
-                  }}
-                />
-              </li>
+            {groups.map((g) => (
+              <FileRow
+                key={g.name}
+                group={g}
+                onAddKb={() => {
+                  setKb(g.current.id, "parsing")
+                  setTimeout(() => setKb(g.current.id, "ready"), 2500)
+                }}
+              />
             ))}
           </ul>
         </section>
@@ -210,6 +197,75 @@ export function FilesView() {
         onImport={(list) => add(list.map((f) => ({ ...f, origin: "baidu" as const })))}
       />
     </div>
+  )
+}
+
+/**
+ * 一个文件 = 一行，显示当前版本；有历史版本时可以展开查看。
+ * 历史版本也占用存储空间，所以用量条按所有版本计算。
+ */
+function FileRow({ group, onAddKb }: { group: FileGroup; onAddKb: () => void }) {
+  const [open, setOpen] = useState(false)
+  const f = group.current
+  const hasHistory = group.history.length > 0
+  return (
+    <li>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+        <FileIcon className="size-4 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            <span className="truncate">{f.name}</span>
+            {(hasHistory || f.version > 1) && (
+              <Badge variant="outline" className="font-mono">
+                v{f.version}
+              </Badge>
+            )}
+          </p>
+          <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            <span className="tabular-nums">{formatBytes(f.size)}</span>
+            <span>·</span>
+            <span className="inline-flex items-center gap-1">
+              {f.origin === "baidu" ? <CloudDownloadIcon className="size-3" /> : <HardDriveIcon className="size-3" />}
+              {f.origin === "baidu" ? `百度网盘${f.path ? ` ${f.path}` : ""}` : "本地上传"}
+            </span>
+            <span>·</span>
+            <span className="font-mono" title={`SHA-256 ${f.fingerprint}`}>
+              {f.fingerprint.slice(0, 10)}
+            </span>
+            {hasHistory && (
+              <>
+                <span>·</span>
+                <button
+                  type="button"
+                  onClick={() => setOpen((o) => !o)}
+                  aria-expanded={open}
+                  className="inline-flex cursor-pointer items-center gap-0.5 hover:text-foreground"
+                >
+                  <HistoryIcon className="size-3" />
+                  历史版本 {group.history.length}
+                  <ChevronRightIcon className={cn("size-3 transition-transform", open && "rotate-90")} />
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+        <KbAction state={f.kb} onAdd={onAddKb} />
+      </div>
+      {open && (
+        <ol className="mb-3 ml-11 mr-4 space-y-1 border-l pl-4" aria-label={`${f.name} 的历史版本`}>
+          {group.history.map((h) => (
+            <li key={h.id} className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              <span className="font-mono font-medium text-foreground">v{h.version}</span>
+              <span>{new Date(h.uploadedAt).toLocaleString("zh-CN", { dateStyle: "short", timeStyle: "short" })}</span>
+              <span>·</span>
+              <span className="tabular-nums">{formatBytes(h.size)}</span>
+              <span>·</span>
+              <span className="font-mono">{h.fingerprint.slice(0, 10)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </li>
   )
 }
 
