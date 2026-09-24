@@ -105,6 +105,8 @@ export const ROLE_ORDER: RoleId[] = ["admin", "standard", "tool_user", "reader",
 
 export interface Member {
   id: string
+  /** 工作单位邮箱：登录账号，邀请制 */
+  email: string
   name: string
   dept: string
   role: RoleId
@@ -114,17 +116,20 @@ export interface Member {
   collections?: Collection[]
   quota?: Partial<Quota>
   usage: { storageGB: number; aiThisMonth: number }
+  invitedAt?: number
+  invitedBy?: string
+  lastLoginAt?: number
 }
 
 export const MEMBERS: Member[] = [
-  { id: "u1", name: "张明", dept: "设计一所", role: "admin", status: "active", featureOverrides: {}, usage: { storageGB: 36.2, aiThisMonth: 812 } },
-  { id: "u2", name: "李娜", dept: "设计一所", role: "standard", status: "active", featureOverrides: {}, usage: { storageGB: 21.5, aiThisMonth: 640 } },
-  { id: "u3", name: "王磊", dept: "设计二所", role: "standard", status: "active", featureOverrides: { upload: false }, usage: { storageGB: 3.1, aiThisMonth: 1320 } },
-  { id: "u4", name: "陈静", dept: "技术质量部", role: "reader", status: "active", featureOverrides: { chat: true }, collections: ["standards", "atlas", "journals"], usage: { storageGB: 0.4, aiThisMonth: 96 } },
-  { id: "u5", name: "刘洋", dept: "参数化小组", role: "tool_user", status: "active", featureOverrides: {}, usage: { storageGB: 4.6, aiThisMonth: 180 } },
-  { id: "u6", name: "赵敏", dept: "设计二所", role: "standard", status: "invited", featureOverrides: {}, usage: { storageGB: 0, aiThisMonth: 0 } },
-  { id: "u7", name: "周老师（外聘顾问）", dept: "外部", role: "reader", status: "active", featureOverrides: {}, usage: { storageGB: 0.1, aiThisMonth: 0 } },
-  { id: "u8", name: "孙悦（实习）", dept: "设计一所", role: "standard", status: "disabled", featureOverrides: {}, usage: { storageGB: 1.2, aiThisMonth: 0 } },
+  { id: "u1", email: "zhang.ming@studio.cn", name: "张明", dept: "设计一所", role: "admin", status: "active", featureOverrides: {}, usage: { storageGB: 36.2, aiThisMonth: 812 } },
+  { id: "u2", email: "li.na@studio.cn", name: "李娜", dept: "设计一所", role: "standard", status: "active", featureOverrides: {}, usage: { storageGB: 21.5, aiThisMonth: 640 } },
+  { id: "u3", email: "wang.lei@studio.cn", name: "王磊", dept: "设计二所", role: "standard", status: "active", featureOverrides: { upload: false }, usage: { storageGB: 3.1, aiThisMonth: 1320 } },
+  { id: "u4", email: "chen.jing@studio.cn", name: "陈静", dept: "技术质量部", role: "reader", status: "active", featureOverrides: { chat: true }, collections: ["standards", "atlas", "journals"], usage: { storageGB: 0.4, aiThisMonth: 96 } },
+  { id: "u5", email: "liu.yang@studio.cn", name: "刘洋", dept: "参数化小组", role: "tool_user", status: "active", featureOverrides: {}, usage: { storageGB: 4.6, aiThisMonth: 180 } },
+  { id: "u6", email: "zhao.min@studio.cn", name: "赵敏", dept: "设计二所", role: "standard", status: "invited", featureOverrides: {}, usage: { storageGB: 0, aiThisMonth: 0 } },
+  { id: "u7", email: "zhou@partner-design.com", name: "周老师（外聘顾问）", dept: "外部", role: "reader", status: "active", featureOverrides: {}, usage: { storageGB: 0.1, aiThisMonth: 0 } },
+  { id: "u8", email: "sun.yue@studio.cn", name: "孙悦（实习）", dept: "设计一所", role: "standard", status: "disabled", featureOverrides: {}, usage: { storageGB: 1.2, aiThisMonth: 0 } },
 ]
 
 export interface ResolvedPermissions {

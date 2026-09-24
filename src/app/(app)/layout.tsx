@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 
 import { AccountProvider } from "@/components/account/account-provider"
 import { AppShell } from "@/components/shell/app-shell"
+import { FEATURE_ORDER, ROLES, type Feature } from "@/lib/auth/permissions"
 import { getCurrentUser } from "@/lib/server/current-user"
 import { getPrefs } from "@/lib/server/prefs"
 
@@ -13,7 +14,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await getCurrentUser()
   if (!user) redirect("/login")
   return (
-    <AccountProvider email={user.email} initialPrefs={getPrefs(user.email)}>
+    <AccountProvider
+      email={user.email}
+      name={user.member.name}
+      roleLabel={ROLES[user.member.role].label}
+      isAdmin={user.permissions.features.admin.on}
+      features={Object.fromEntries(FEATURE_ORDER.map((f) => [f, user.permissions.features[f].on])) as Record<Feature, boolean>}
+      initialPrefs={getPrefs(user.email)}
+    >
       <AppShell>{children}</AppShell>
     </AccountProvider>
   )

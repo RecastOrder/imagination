@@ -20,6 +20,7 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useAccount } from "@/components/account/account-provider"
+import type { Feature } from "@/lib/auth/permissions"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { Logo } from "./logo"
@@ -34,16 +35,16 @@ import { ThemeToggle } from "./theme-toggle"
  */
 export type SidebarVariant = "expanded" | "rail" | "drawer"
 
-const NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/chat", label: "对话", icon: MessageSquareIcon },
-  { href: "/library", label: "资料库", icon: LibraryIcon },
-  { href: "/notebook", label: "笔记本", icon: BookMarkedIcon },
-  { href: "/files", label: "我的文件", icon: FolderIcon },
+const NAV: { href: string; label: string; icon: LucideIcon; feature: Feature }[] = [
+  { href: "/chat", label: "对话", icon: MessageSquareIcon, feature: "chat" },
+  { href: "/library", label: "资料库", icon: LibraryIcon, feature: "library" },
+  { href: "/notebook", label: "笔记本", icon: BookMarkedIcon, feature: "notebook" },
+  { href: "/files", label: "我的文件", icon: FolderIcon, feature: "upload" },
 ]
 
 /** 管理类入口：只有有对应权限的人才会看到（演示中默认当前用户是管理员） */
-const ADMIN_NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/admin/members", label: "成员与权限", icon: UsersIcon },
+const ADMIN_NAV: { href: string; label: string; icon: LucideIcon; adminOnly?: boolean }[] = [
+  { href: "/admin/members", label: "成员与权限", icon: UsersIcon, adminOnly: true },
   { href: "/design", label: "设计系统", icon: PaletteIcon },
 ]
 
@@ -64,6 +65,10 @@ export function Sidebar({
 }) {
   const pathname = usePathname()
   const rail = variant === "rail"
+  // 没有权限的入口直接不显示（而不是置灰）：用户不需要知道它存在
+  const { isAdmin, features } = useAccount()
+  const adminNav = ADMIN_NAV.filter((i) => !i.adminOnly || isAdmin)
+  const nav = NAV.filter((i) => features[i.feature])
 
   return (
     <nav
@@ -100,21 +105,25 @@ export function Sidebar({
       </div>
 
       <div className={cn("flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
-        <SidebarItem href="/chat" icon={SquarePenIcon} label="新建对话" rail={rail} onNavigate={onNavigate} />
-        <SidebarItem
-          href="/library"
-          icon={SearchIcon}
-          label="检索资料"
-          rail={rail}
-          onNavigate={onNavigate}
-          trailing={<Kbd>⌘K</Kbd>}
-        />
+        {features.chat && (
+          <SidebarItem href="/chat" icon={SquarePenIcon} label="新建对话" rail={rail} onNavigate={onNavigate} />
+        )}
+        {features.library && (
+          <SidebarItem
+            href="/library"
+            icon={SearchIcon}
+            label="检索资料"
+            rail={rail}
+            onNavigate={onNavigate}
+            trailing={<Kbd>⌘K</Kbd>}
+          />
+        )}
       </div>
 
       {/* 中部 */}
       <div className={cn("mt-4 flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
         {!rail && <SectionLabel>工作区</SectionLabel>}
-        {NAV.map((item) => (
+        {nav.map((item) => (
           <SidebarItem
             key={item.href}
             {...item}
@@ -126,8 +135,8 @@ export function Sidebar({
       </div>
 
       <div className={cn("mt-4 flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
-        {!rail && <SectionLabel>管理</SectionLabel>}
-        {ADMIN_NAV.map((item) => (
+        {!rail && <SectionLabel>{isAdmin ? "管理" : "其他"}</SectionLabel>}
+        {adminNav.map((item) => (
           <SidebarItem
             key={item.href}
             {...item}
@@ -138,7 +147,7 @@ export function Sidebar({
         ))}
       </div>
 
-      {!rail && (
+      {!rail && features.chat && (
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto px-2">
           <SectionLabel>最近对话</SectionLabel>
           {RECENT.map((c) => (
@@ -218,8 +227,8 @@ function SidebarItem({
 
 /** 用户菜单：头像 + 邮箱；点击展开“账户设置 / 退出登录” */
 function UserMenu({ rail, onNavigate }: { rail: boolean; onNavigate?: () => void }) {
-  const { email, logout } = useAccount()
-  const initial = email.slice(0, 1).toUpperCase()
+  const { email, name, roleLabel, logout } = useAccount()
+  const initial = name.slice(0, 1).toUpperCase()
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -236,14 +245,19 @@ function UserMenu({ rail, onNavigate }: { rail: boolean; onNavigate?: () => void
           </span>
           {!rail && (
             <span className="min-w-0 flex-1 text-sm leading-tight">
-              <span className="block truncate font-medium">{email.split("@")[0]}</span>
+              <span className="block truncate font-medium">{name}</span>
               <span className="block truncate text-xs text-muted-foreground">{email}</span>
             </span>
           )}
         </button>
       </PopoverTrigger>
       <PopoverContent side={rail ? "right" : "top"} align="start" className="w-56">
-        <p className="truncate px-2 py-1.5 text-xs text-muted-foreground">{email}</p>
+        <div className="px-2 py-1.5">
+          <p className="truncate text-sm font-medium">{name}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {email} · {roleLabel}
+          </p>
+        </div>
         <Link
           href="/settings"
           onClick={onNavigate}

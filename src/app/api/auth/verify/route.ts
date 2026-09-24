@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 
 import { normalizeEmail, verifyCode } from "@/lib/server/otp"
-import { LAST_EMAIL_COOKIE, SESSION_COOKIE, createSessionToken, sessionCookieOptions } from "@/lib/server/session"
+import { resolve } from "@/lib/auth/permissions"
+import { homeFor } from "@/lib/server/guard"
+import { findMember, markLogin } from "@/lib/server/members"
+import { LAST_EMAIL_COOKIE, SESSION_COOKIE, createSession, sessionCookieOptions } from "@/lib/server/session"
 
 const MESSAGES = {
   expired: "验证码已过期，请重新获取",
@@ -20,8 +23,13 @@ export async function POST(req: Request) {
   const result = verifyCode(email, code)
   if (result !== "ok") return NextResponse.json({ error: MESSAGES[result], reason: result }, { status: 401 })
 
-  const res = NextResponse.json({ ok: true, email })
-  res.cookies.set(SESSION_COOKIE, await createSessionToken(email), sessionCookieOptions)
+  // 新建会话；按设备策略，同类设备上之前的登录会自动退出
+  const { token, replaced } = await createSession(email, req.headers.get("user-agent") ?? "")
+  markLogin(email)
+  const member = findMember(email)
+  // home：这个人有权限的第一个页面（没有指定 next 时登录后去这里）
+  const res = NextResponse.json({ ok: true, email, replaced, home: member ? homeFor(resolve(member)) : "/settings" })
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions)
   // 记住邮箱，下次登录页自动填好（不是登录凭证，只是便利）
   res.cookies.set(LAST_EMAIL_COOKIE, email, { ...sessionCookieOptions, maxAge: 60 * 60 * 24 * 365 })
   return res

@@ -13,7 +13,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   FEATURES,
   FEATURE_ORDER,
-  MEMBERS,
   ROLES,
   ROLE_ORDER,
   overrideCount,
@@ -22,6 +21,7 @@ import {
   type RoleId,
 } from "@/lib/auth/permissions"
 import { cn } from "@/lib/utils"
+import { InviteSheet } from "./invite-sheet"
 import { MemberSheet } from "./member-sheet"
 import { RoleMatrix } from "./role-matrix"
 
@@ -36,15 +36,16 @@ const STATUS: Record<Member["status"], { label: string; cls: string }> = {
  * - 成员：列表一眼看出“谁是什么角色、能用哪些功能、用量是否快满”
  * - 角色模板：权限矩阵
  */
-export function MembersView() {
+export function MembersView({ initialMembers, currentEmail }: { initialMembers: Member[]; currentEmail: string }) {
   const [tab, setTab] = useState<"members" | "roles">("members")
-  const [members, setMembers] = useState(MEMBERS)
+  const [members, setMembers] = useState(initialMembers)
+  const [inviting, setInviting] = useState(false)
   const [editing, setEditing] = useState<Member | null>(null)
   const [q, setQ] = useState("")
   const [role, setRole] = useState<RoleId | "all">("all")
 
   const list = members.filter(
-    (m) => (role === "all" || m.role === role) && (!q || (m.name + m.dept).includes(q.trim())),
+    (m) => (role === "all" || m.role === role) && (!q || (m.name + m.dept + m.email).toLowerCase().includes(q.trim().toLowerCase())),
   )
 
   return (
@@ -55,7 +56,7 @@ export function MembersView() {
             <h1 className="text-2xl font-semibold tracking-tight">成员与权限</h1>
             <p className="mt-1 text-sm text-muted-foreground">角色模板决定默认权限，个别成员可以单独调整。</p>
           </div>
-          <Button onClick={() => toast("演示：将发送邀请链接，受邀人登录后自动套用所选角色模板")}>
+          <Button onClick={() => setInviting(true)}>
             <UserPlusIcon />
             邀请成员
           </Button>
@@ -81,7 +82,7 @@ export function MembersView() {
             <div className="mt-6 flex flex-wrap items-center gap-2">
               <div className="relative w-full sm:w-64">
                 <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="姓名或部门" className="pl-9" />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="姓名、部门或邮箱" className="pl-9" />
               </div>
               <div className="flex flex-wrap gap-1">
                 {(["all", ...ROLE_ORDER] as const).map((r) => (
@@ -130,7 +131,10 @@ export function MembersView() {
                           </span>
                           <span className="min-w-0">
                             <span className="block truncate text-sm font-medium">{m.name}</span>
-                            <span className="block truncate text-xs text-muted-foreground">{m.dept}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {m.email}
+                              {m.dept && ` · ${m.dept}`}
+                            </span>
                           </span>
                         </span>
                         <span className="flex items-center gap-1.5 justify-self-end md:justify-self-start">
@@ -185,12 +189,37 @@ export function MembersView() {
 
       <MemberSheet
         member={editing}
+        isSelf={editing?.email === currentEmail}
         onClose={() => setEditing(null)}
-        onSave={(m) => {
-          setMembers((ms) => ms.map((x) => (x.id === m.id ? m : x)))
+        onSave={async (m) => {
+          const r = await fetch("/api/admin/members", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(m),
+          })
+          const data = await r.json()
+          if (!r.ok) {
+            toast(data.error ?? "保存失败")
+            return false
+          }
+          setMembers((ms) => ms.map((x) => (x.email === data.email ? data : x)))
           setEditing(null)
+          toast(`已更新 ${data.name} 的权限`)
+          return true
+        }}
+        onRevoke={async (m) => {
+          const r = await fetch("/api/admin/members", {
+            method: "DELETE",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email: m.email }),
+          })
+          if (!r.ok) return toast((await r.json()).error ?? "撤销失败")
+          setMembers((ms) => ms.filter((x) => x.email !== m.email))
+          setEditing(null)
+          toast(`已撤销对 ${m.email} 的邀请`)
         }}
       />
+      <InviteSheet open={inviting} onOpenChange={setInviting} onInvited={(m) => setMembers((ms) => [...ms, m])} />
     </div>
   )
 }

@@ -3,10 +3,17 @@
 import { createContext, useCallback, useContext, useState } from "react"
 import { useRouter } from "next/navigation"
 
+import type { Feature } from "@/lib/auth/permissions"
 import type { AccountPrefs } from "@/lib/server/prefs"
 
 interface AccountContextValue {
   email: string
+  name: string
+  roleLabel: string
+  /** 能否看到“管理”入口。只影响界面显示，接口会在服务端再校验 */
+  isAdmin: boolean
+  /** 各功能是否可用（同样只用于界面显示） */
+  features: Record<Feature, boolean>
   prefs: AccountPrefs
   setPref: <K extends keyof AccountPrefs>(key: K, value: AccountPrefs[K]) => void
   logout: () => Promise<void>
@@ -21,10 +28,18 @@ const AccountContext = createContext<AccountContextValue | null>(null)
  */
 export function AccountProvider({
   email,
+  name,
+  roleLabel,
+  isAdmin,
+  features,
   initialPrefs,
   children,
 }: {
   email: string
+  name: string
+  roleLabel: string
+  isAdmin: boolean
+  features: Record<Feature, boolean>
   initialPrefs: AccountPrefs
   children: React.ReactNode
 }) {
@@ -54,7 +69,7 @@ export function AccountProvider({
     router.refresh()
   }, [router])
 
-  return <AccountContext.Provider value={{ email, prefs, setPref, logout }}>{children}</AccountContext.Provider>
+  return <AccountContext.Provider value={{ email, name, roleLabel, isAdmin, features, prefs, setPref, logout }}>{children}</AccountContext.Provider>
 }
 
 export function useAccount() {

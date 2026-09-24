@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Meter } from "@/components/ui/meter"
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
-import { toast } from "@/components/ui/toast"
 import {
   COLLECTIONS,
   COLLECTION_ORDER,
@@ -28,23 +27,41 @@ import { cn } from "@/lib/utils"
  */
 export function MemberSheet({
   member,
+  isSelf,
   onClose,
   onSave,
+  onRevoke,
 }: {
   member: Member | null
+  isSelf?: boolean
   onClose: () => void
-  onSave: (m: Member) => void
+  /** 返回是否保存成功（由服务端决定） */
+  onSave: (m: Member) => Promise<boolean>
+  onRevoke: (m: Member) => void
 }) {
   return (
     <Sheet open={!!member} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-[min(100%,30rem)] p-0">
-        {member && <Editor key={member.id} member={member} onClose={onClose} onSave={onSave} />}
+        {member && <Editor key={member.id} member={member} isSelf={!!isSelf} onClose={onClose} onSave={onSave} onRevoke={onRevoke} />}
       </SheetContent>
     </Sheet>
   )
 }
 
-function Editor({ member, onClose, onSave }: { member: Member; onClose: () => void; onSave: (m: Member) => void }) {
+function Editor({
+  member,
+  isSelf,
+  onClose,
+  onSave,
+  onRevoke,
+}: {
+  member: Member
+  isSelf: boolean
+  onClose: () => void
+  onSave: (m: Member) => Promise<boolean>
+  onRevoke: (m: Member) => void
+}) {
+  const [saving, setSaving] = useState(false)
   const [draft, setDraft] = useState<Member>(member)
   const r = resolve(draft)
   const template = ROLES[draft.role]
@@ -74,7 +91,10 @@ function Editor({ member, onClose, onSave }: { member: Member; onClose: () => vo
           </span>
           <div>
             <SheetTitle>{draft.name}</SheetTitle>
-            <SheetDescription>{draft.dept}</SheetDescription>
+            <SheetDescription>
+              {draft.email}
+              {draft.dept && ` · ${draft.dept}`}
+            </SheetDescription>
           </div>
         </div>
       </div>
@@ -186,7 +206,35 @@ function Editor({ member, onClose, onSave }: { member: Member; onClose: () => vo
           </div>
         </section>
 
-        {/* 5. 效果预览：这个人登录后看到什么 */}
+        {/* 5. 账号状态 */}
+        <section>
+          <h3 className="text-sm font-semibold">账号状态</h3>
+          {draft.status === "invited" ? (
+            <div className="mt-3 flex items-center gap-3 rounded-lg border px-3 py-2.5">
+              <p className="flex-1 text-sm text-muted-foreground">已邀请，对方还没有登录过</p>
+              <Button variant="outline" size="sm" onClick={() => onRevoke(member)}>
+                撤销邀请
+              </Button>
+            </div>
+          ) : (
+            <label className="mt-3 flex items-center gap-3 rounded-lg border px-3 py-2.5">
+              <span className="flex-1">
+                <span className="block text-sm">允许登录</span>
+                <span className="block text-xs text-muted-foreground">
+                  {isSelf ? "不能停用自己的账号" : "保存后立即生效：此人所有设备都会被退出"}
+                </span>
+              </span>
+              <Switch
+                checked={draft.status !== "disabled"}
+                disabled={isSelf}
+                onCheckedChange={(v) => setDraft({ ...draft, status: v ? "active" : "disabled" })}
+                aria-label="允许登录"
+              />
+            </label>
+          )}
+        </section>
+
+        {/* 6. 效果预览：这个人登录后看到什么 */}
         <section>
           <h3 className="text-sm font-semibold">该成员看到的侧栏</h3>
           <p className="mt-0.5 mb-3 text-xs text-muted-foreground">没有权限的功能不出现在导航里；通过链接误入时会看到“无权限”说明页</p>
@@ -214,10 +262,11 @@ function Editor({ member, onClose, onSave }: { member: Member; onClose: () => vo
           取消
         </Button>
         <Button
-          disabled={!dirty}
-          onClick={() => {
-            onSave(draft)
-            toast(`已更新 ${draft.name} 的权限（演示）`)
+          disabled={!dirty || saving}
+          onClick={async () => {
+            setSaving(true)
+            await onSave(draft)
+            setSaving(false)
           }}
         >
           保存

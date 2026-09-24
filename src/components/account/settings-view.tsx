@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button"
 import { CHAT_MODES, type ChatMode } from "@/lib/chat/modes"
 import { cn } from "@/lib/utils"
 import { useAccount } from "./account-provider"
+import { DevicesSection } from "./devices-section"
 
 /** 账户设置：账户信息 + 跟随账户保存的偏好 */
 export function SettingsView() {
-  const { email, prefs, setPref, logout } = useAccount()
+  const { email, name, roleLabel, prefs, setPref, logout } = useAccount()
 
   return (
     <div className="h-full overflow-y-auto">
@@ -19,6 +20,14 @@ export function SettingsView() {
         <section className="mt-8 rounded-xl border bg-surface">
           <h2 className="border-b px-5 py-3 text-sm font-semibold">账户</h2>
           <dl className="divide-y text-sm">
+            <div className="flex items-center gap-4 px-5 py-3">
+              <dt className="w-20 shrink-0 text-muted-foreground">姓名</dt>
+              <dd className="min-w-0 flex-1 truncate font-medium">{name}</dd>
+            </div>
+            <div className="flex items-center gap-4 px-5 py-3">
+              <dt className="w-20 shrink-0 text-muted-foreground">角色</dt>
+              <dd className="min-w-0 flex-1 truncate">{roleLabel}</dd>
+            </div>
             <div className="flex items-center gap-4 px-5 py-3">
               <dt className="w-20 shrink-0 text-muted-foreground">邮箱</dt>
               <dd className="min-w-0 flex-1 truncate font-medium">{email}</dd>
@@ -68,6 +77,8 @@ export function SettingsView() {
             })}
           </div>
         </section>
+
+        <DevicesSection />
 
         <Button variant="outline" className="mt-8" onClick={logout}>
           <LogOutIcon />

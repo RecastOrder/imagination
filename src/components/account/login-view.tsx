@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeftIcon, InfoIcon, LoaderCircleIcon, MailIcon } from "lucide-react"
+import { ArrowLeftIcon, InfoIcon, LoaderCircleIcon, LogOutIcon, MailIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,32 @@ import { Logo } from "@/components/shell/logo"
  *   ② 输入 6 位验证码（输满自动提交）→ 进入原来要去的页面
  * 没有密码：不用记、不会泄露；邮箱本身就是身份。
  */
-export function LoginView({ next, lastEmail = "" }: { next: string; lastEmail?: string }) {
+const REASONS: Record<string, string> = {
+  replaced: "你的账号在另一台同类设备上登录了，这台设备已自动退出。每个账号同时只能在 1 台电脑和 1 台手机上登录。",
+  disabled: "你的账号已被管理员停用。",
+  revoked: "这台设备已被退出登录。",
+  expired: "登录已过期（30 天），请重新登录。",
+}
+
+/** 演示环境预置的成员（邀请制：只有名单里的邮箱能登录） */
+const DEMO_ACCOUNTS = [
+  { email: "zhang.ming@studio.cn", label: "张明 · 管理员" },
+  { email: "li.na@studio.cn", label: "李娜 · 标准成员" },
+]
+
+export function LoginView({
+  next,
+  lastEmail = "",
+  reason,
+  demo,
+}: {
+  /** 登录后要回到的页面；没有时去“这个人有权限的第一个页面” */
+  next?: string
+  /** 邀请链接里带的邮箱，或上次登录用的邮箱 */
+  lastEmail?: string
+  reason?: string
+  demo?: boolean
+}) {
   const router = useRouter()
   const [step, setStep] = useState<"email" | "code">("email")
   // 上次登录用的邮箱由服务端从 Cookie 读出来传入（只是便利功能）
@@ -27,6 +52,7 @@ export function LoginView({ next, lastEmail = "" }: { next: string; lastEmail?: 
   const [cooldown, setCooldown] = useState(0)
   const [demoCode, setDemoCode] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [replacedNote, setReplacedNote] = useState<string | null>(null)
 
   // 重发倒计时
   useEffect(() => {
@@ -76,7 +102,12 @@ export function LoginView({ next, lastEmail = "" }: { next: string; lastEmail?: 
         return
       }
       setDone(true)
-      router.replace(next)
+      if (data.replaced?.length) {
+        // 告诉用户：同类设备上之前的登录已退出，停留片刻让人看清
+        setReplacedNote(`之前在另一台${data.replaced[0] === "mobile" ? "手机" : "电脑"}上的登录已自动退出`)
+        await new Promise((r) => setTimeout(r, 1500))
+      }
+      router.replace(next ?? data.home ?? "/chat")
       router.refresh()
     } catch {
       setError("网络连接失败，请检查网络后重试")
@@ -102,8 +133,16 @@ export function LoginView({ next, lastEmail = "" }: { next: string; lastEmail?: 
                 sendCode()
               }}
             >
+              {reason && REASONS[reason] && (
+                <p role="status" className="mb-6 flex gap-2 rounded-lg bg-surface-sunken px-3 py-2.5 text-sm">
+                  <LogOutIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  {REASONS[reason]}
+                </p>
+              )}
               <h1 className="text-2xl font-semibold tracking-tight">登录</h1>
-              <p className="mt-2 text-sm text-muted-foreground">输入你的邮箱，我们会发送一个 6 位验证码。第一次使用会自动创建账户。</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                使用受邀的工作单位邮箱登录，我们会发送 6 位验证码，无需密码。
+              </p>
               <label htmlFor="email" className="mt-8 block text-sm font-medium">
                 邮箱
               </label>
@@ -131,8 +170,29 @@ export function LoginView({ next, lastEmail = "" }: { next: string; lastEmail?: 
               )}
               <Button type="submit" size="lg" className="mt-6 w-full" disabled={pending || !email.trim()}>
                 {pending && <LoaderCircleIcon className="animate-spin" />}
-                {pending ? "发送中…" : "获取验证码"}
+                {pending ? "发送验证码中…" : "登录"}
               </Button>
+              <p className="mt-3 text-center text-xs text-muted-foreground">本平台采用邀请制。还没有账号？请联系你所在单位的管理员</p>
+              {demo && (
+                <div className="mt-8 rounded-lg border border-dashed p-3 text-sm">
+                  <p className="text-muted-foreground">演示环境的成员账号，点击填入：</p>
+                  <div className="mt-2 flex flex-col items-start gap-1">
+                    {DEMO_ACCOUNTS.map((a) => (
+                      <button
+                        key={a.email}
+                        type="button"
+                        onClick={() => {
+                          setEmail(a.email)
+                          setError(null)
+                        }}
+                        className="cursor-pointer font-mono text-[13px] hover:text-primary"
+                      >
+                        {a.email} <span className="font-sans text-xs text-muted-foreground">{a.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </form>
           ) : (
             <div>
@@ -168,9 +228,12 @@ export function LoginView({ next, lastEmail = "" }: { next: string; lastEmail?: 
 
               <div className="mt-3 min-h-5 text-sm" aria-live="polite">
                 {done ? (
-                  <span className="inline-flex items-center gap-1.5 text-success">
-                    <LoaderCircleIcon className="size-4 animate-spin" />
-                    登录成功，正在进入…
+                  <span className="flex flex-col gap-1">
+                    <span className="inline-flex items-center gap-1.5 text-success">
+                      <LoaderCircleIcon className="size-4 animate-spin" />
+                      登录成功，正在进入…
+                    </span>
+                    {replacedNote && <span className="text-muted-foreground">{replacedNote}</span>}
                   </span>
                 ) : pending ? (
                   <span className="inline-flex items-center gap-1.5 text-muted-foreground">
