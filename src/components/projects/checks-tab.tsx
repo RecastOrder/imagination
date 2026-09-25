@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2Icon, CircleDashedIcon, InfoIcon, XCircleIcon } from "lucide-react"
+import { CheckCircle2Icon, CircleDashedIcon, FileSearchIcon, InfoIcon, PencilIcon, XCircleIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { runChecks, type CheckStatus } from "@/lib/projects/checks"
-import type { Project } from "@/lib/projects/types"
+import type { Condition, Project } from "@/lib/projects/types"
+import { ConditionsEditor } from "./conditions-editor"
 import { cn } from "@/lib/utils"
 
 const STATUS: Record<CheckStatus, { label: string; icon: typeof CheckCircle2Icon; cls: string }> = {
@@ -25,8 +26,19 @@ export function ChecksTab({
 }: {
   project: Project
   canEdit: boolean
-  onSave: (patch: { metrics: Record<string, number | undefined> }) => Promise<boolean>
+  onSave: (patch: { metrics: Record<string, number | undefined> } | { conditions: Condition[] }) => Promise<boolean>
 }) {
+  const [editor, setEditor] = useState<null | "manual" | "pdf">(null)
+  const editorEl = editor && (
+    <ConditionsEditor
+      open
+      onOpenChange={(o) => !o && setEditor(null)}
+      projectId={project.id}
+      conditions={project.conditions}
+      startWithPdf={editor === "pdf"}
+      onSave={(conditions) => onSave({ conditions })}
+    />
+  )
   const [draft, setDraft] = useState<Record<string, string>>(() =>
     Object.fromEntries(project.conditions.map((c) => [c.key, project.metrics[c.key]?.toString() ?? ""])),
   )
@@ -46,6 +58,21 @@ export function ChecksTab({
         <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
           拿到规划条件通知书后，把容积率、绿地率、限高等限值录进来，这里就能逐条做数字比较（辅助核对，不代替审查）。
         </p>
+        {canEdit ? (
+          <div className="mt-5 flex justify-center gap-2">
+            <Button onClick={() => setEditor("pdf")}>
+              <FileSearchIcon />
+              从 PDF 识别
+            </Button>
+            <Button variant="outline" onClick={() => setEditor("manual")}>
+              <PencilIcon />
+              手动录入
+            </Button>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">由项目里有编辑权限的人录入。</p>
+        )}
+        {editorEl}
       </div>
     )
 
@@ -58,7 +85,7 @@ export function ChecksTab({
         </span>
       </p>
 
-      <div className="flex flex-wrap gap-4 text-sm">
+      <div className="flex flex-wrap items-center gap-4 text-sm">
         {(Object.keys(STATUS) as CheckStatus[]).map((k) => {
           const { label, icon: Icon, cls } = STATUS[k]
           return (
@@ -68,7 +95,14 @@ export function ChecksTab({
             </span>
           )
         })}
+        {canEdit && (
+          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setEditor("manual")}>
+            <PencilIcon />
+            编辑规划条件
+          </Button>
+        )}
       </div>
+      {editorEl}
 
       <div className="overflow-x-auto rounded-xl border bg-surface">
         <table className="w-full min-w-[640px] text-sm">

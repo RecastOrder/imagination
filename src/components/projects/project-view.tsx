@@ -3,10 +3,11 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeftIcon, EyeIcon, FolderTreeIcon, PencilIcon } from "lucide-react"
+import { ArchiveIcon, ArchiveRestoreIcon, ArrowLeftIcon, EyeIcon, FolderTreeIcon, PencilIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/toast"
 import { runChecks } from "@/lib/projects/checks"
 import type { ProjectRef } from "@/lib/projects/refs"
@@ -42,6 +43,11 @@ export function ProjectView({
   directory: { email: string; name: string }[]
 }) {
   const [project, setProject] = useState(initial)
+  const [confirmArchive, setConfirmArchive] = useState(false)
+  // 归档后只读：界面按“不能编辑”显示（服务端同样会拒绝修改）
+  const archived = !!project.archivedAt
+  const edit = access.canEdit && !archived
+  const manage = access.canManage && !archived
   const params = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -90,6 +96,7 @@ export function ProjectView({
           <span className="text-sm text-muted-foreground">
             {project.location.city} {project.location.district}
           </span>
+          {archived && <Badge variant="outline">已归档</Badge>}
           <AccessBadge access={access} className="ml-auto" />
           <Button asChild variant="outline" size="sm">
             <Link href={`/browse?f=${encodeURIComponent(`proj/${project.id}`)}`}>
@@ -97,7 +104,46 @@ export function ProjectView({
               项目文件
             </Link>
           </Button>
+          {access.canManage && !archived && (
+            <Button variant="ghost" size="sm" onClick={() => setConfirmArchive(true)} title="项目结束后归档：只读保留，可以恢复">
+              <ArchiveIcon />
+              归档
+            </Button>
+          )}
         </div>
+
+        {archived && (
+          <div role="status" className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-surface-sunken px-4 py-3 text-sm">
+            <ArchiveIcon className="size-4 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1">
+              这个项目已于 {new Date(project.archivedAt!).toLocaleDateString("zh-CN")} 归档：所有内容只读保留，不会删除。
+            </span>
+            {access.canManage && (
+              <Button variant="outline" size="sm" onClick={() => save({ archived: false })}>
+                <ArchiveRestoreIcon />
+                恢复项目
+              </Button>
+            )}
+          </div>
+        )}
+
+        <Dialog open={confirmArchive} onOpenChange={setConfirmArchive}>
+          <DialogContent>
+            <DialogTitle>归档「{project.name}」？</DialogTitle>
+            <DialogDescription>
+              归档后项目移到列表的“已归档”里，所有内容（文件、依据清单、问题、指标）只读保留，随时可以恢复。项目不能删除。
+            </DialogDescription>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setConfirmArchive(false)}>
+                取消
+              </Button>
+              <Button onClick={async () => (await save({ archived: true })) && setConfirmArchive(false)}>
+                <ArchiveIcon />
+                归档
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* 标签栏：下划线式标签，当前项用强调色 */}
         <nav aria-label="项目内容" className="mt-6 flex gap-1 overflow-x-auto border-b">
@@ -123,11 +169,11 @@ export function ProjectView({
         </nav>
 
         <div className="py-6">
-          {tab === "overview" && <OverviewTab project={project} refs={refs} canEdit={access.canManage} onSave={save} />}
-          {tab === "refs" && <RefsTab projectId={project.id} refs={refs} onRefsChange={setRefs} canEdit={access.canEdit} />}
+          {tab === "overview" && <OverviewTab project={project} refs={refs} canEdit={manage} onSave={save} />}
+          {tab === "refs" && <RefsTab projectId={project.id} refs={refs} onRefsChange={setRefs} canEdit={edit} />}
           {tab === "issues" && <IssuesTab issues={issues} />}
-          {tab === "checks" && <ChecksTab key={JSON.stringify(project.metrics)} project={project} canEdit={access.canEdit} onSave={save} />}
-          {tab === "members" && <MembersTab project={project} access={access} directory={directory} onSave={save} />}
+          {tab === "checks" && <ChecksTab key={JSON.stringify([project.metrics, project.conditions])} project={project} canEdit={edit} onSave={save} />}
+          {tab === "members" && <MembersTab project={project} access={{ ...access, canManage: manage }} directory={directory} onSave={save} />}
           {tab === "tools" && <ToolsTab project={project} />}
         </div>
       </div>

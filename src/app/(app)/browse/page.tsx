@@ -24,7 +24,7 @@ export default async function BrowsePage() {
   const projects = listProjectsFor(user.email).map((p) => ({
     id: p.id,
     name: p.name,
-    hint: `${p.location.city.replace(/市$/, "")} · ${p.type} · ${p.stage}`,
+    hint: `${p.location.city.replace(/市$/, "")} · ${p.type} · ${p.archivedAt ? "已归档" : p.stage}`,
     access: canEditContent(p, user.email) ? ("edit" as const) : ("view" as const),
   }))
   const members = listMembers().filter((m) => m.status !== "disabled")

@@ -38,8 +38,9 @@ export interface ProjectAccess {
   admin: boolean
   /** 编辑内容：指标、依据清单、标注、文件 */
   canEdit: boolean
-  /** 管理项目：位置、阶段、成员及其权限 */
+  /** 管理项目：位置、阶段、成员及其权限；归档 / 恢复 */
   canManage: boolean
+  archived: boolean
 }
 
 export const MEMBER_ROLE_ORDER: MemberRole[] = ["lead", "editor", "viewer"]
@@ -72,6 +73,9 @@ export interface Project {
   metrics: Record<string, number | undefined>
   createdBy?: string
   createdAt?: number
+  /** 已定：项目不能删除，只能归档。归档后只读保留，可以恢复 */
+  archivedAt?: number
+  archivedBy?: string
 }
 
 export const STAGES = ["方案", "初设", "施工图", "施工配合"]

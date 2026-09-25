@@ -22,12 +22,14 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]"
   const p = getProject((await ctx.params).id)
   if (!p || !canView(p, user.email)) return NextResponse.json({ error: "项目不存在或无权查看" }, { status: 404 })
   const patch: ProjectPatch = await req.json().catch(() => ({}))
+  if (p.archivedAt && Object.keys(patch).some((k) => k !== "archived"))
+    return NextResponse.json({ error: "项目已归档（只读）。需要修改请先恢复" }, { status: 409 })
   if (patchNeeds(patch) === "manage" ? !canManage(p, user.email) : !canEditContent(p, user.email))
     return NextResponse.json(
       { error: patchNeeds(patch) === "manage" ? "只有项目负责人可以修改项目信息和成员权限" : "你在这个项目里是“仅浏览”，不能修改" },
       { status: 403 },
     )
-  const r = updateProject(p.id, patch)
+  const r = updateProject(p.id, patch, user.email)
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
   return NextResponse.json(r.project)
 }

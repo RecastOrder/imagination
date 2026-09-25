@@ -1,6 +1,6 @@
 import { PROJECT_SEED } from "@/lib/projects/seed"
 import { LOCATIONS } from "@/lib/projects/regional"
-import { MEMBER_ROLES, STAGES, TYPES, type MemberRole, type Project, type ProjectAccess, type ProjectLocation, type ProjectMember } from "@/lib/projects/types"
+import { MEMBER_ROLES, STAGES, TYPES, type MemberRole, type Project, type Condition, type ProjectAccess, type ProjectLocation, type ProjectMember } from "@/lib/projects/types"
 import { collection } from "./db"
 import { findMember, isAdmin } from "./members"
 
@@ -30,7 +30,9 @@ export function roleIn(p: Project, email: string): MemberRole | null {
   return p.members.find((m) => m.email === email)?.role ?? null
 }
 
+/** 归档的项目只读：谁都不能改内容（恢复后再改） */
 export function canEditContent(p: Project, email: string) {
+  if (p.archivedAt) return false
   const r = roleIn(p, email)
   return isAdmin(email) || r === "lead" || r === "editor"
 }
@@ -46,13 +48,38 @@ export function accessOf(p: Project, email: string): ProjectAccess {
     admin: isAdmin(email),
     canEdit: canEditContent(p, email),
     canManage: canManage(p, email),
+    archived: !!p.archivedAt,
   }
 }
 
-/** 这次修改需要哪一级权限：只改指标 → 编辑；其他（位置、阶段、成员…）→ 管理 */
+/** 这次修改需要哪一级权限：只改指标 / 规划条件 → 编辑；其他（位置、阶段、成员、归档…）→ 管理 */
 export function patchNeeds(patch: ProjectPatch): "edit" | "manage" {
   const keys = Object.keys(patch).filter((k) => patch[k as keyof ProjectPatch] !== undefined)
-  return keys.every((k) => k === "metrics") ? "edit" : "manage"
+  return keys.every((k) => k === "metrics" || k === "conditions") ? "edit" : "manage"
+}
+
+/** 规划条件：逐条检查格式，key 不能重复 */
+function cleanConditions(list: unknown): { ok: true; conditions: Condition[] } | { ok: false; error: string } {
+  if (!Array.isArray(list) || list.length > 50) return { ok: false, error: "规划条件格式不正确" }
+  const out: Condition[] = []
+  for (const raw of list) {
+    const c = raw as Condition
+    const label = typeof c?.label === "string" ? c.label.trim().slice(0, 30) : ""
+    if (!label) return { ok: false, error: "每条规划条件都要有名称" }
+    if (!["<=", ">=", "="].includes(c.op)) return { ok: false, error: `「${label}」的比较方式不正确` }
+    if (typeof c.value !== "number" || !Number.isFinite(c.value)) return { ok: false, error: `「${label}」的限值要填数字` }
+    const key = typeof c.key === "string" && c.key.trim() ? c.key.trim().slice(0, 40) : `c${out.length + 1}`
+    if (out.some((x) => x.key === key)) return { ok: false, error: `「${label}」重复了` }
+    out.push({
+      key,
+      label,
+      op: c.op,
+      value: c.value,
+      unit: typeof c.unit === "string" && c.unit.trim() ? c.unit.trim().slice(0, 10) : undefined,
+      source: typeof c.source === "string" && c.source.trim() ? c.source.trim().slice(0, 80) : "手动录入",
+    })
+  }
+  return { ok: true, conditions: out }
 }
 
 export interface NewProjectInput {
@@ -102,14 +129,17 @@ export function createProject(input: NewProjectInput, creator: string): { ok: tr
   return { ok: true, project }
 }
 
-export type ProjectPatch = Partial<Pick<Project, "name" | "type" | "stage" | "metrics">> & {
+export type ProjectPatch = Partial<Pick<Project, "name" | "type" | "stage" | "metrics" | "conditions">> & {
+  /** true = 归档，false = 恢复（只有负责人 / 管理员） */
+  archived?: boolean
   location?: Partial<ProjectLocation>
   members?: ProjectMember[]
 }
 
-export function updateProject(id: string, patch: ProjectPatch): { ok: true; project: Project } | { ok: false; error: string } {
+export function updateProject(id: string, patch: ProjectPatch, actor: string): { ok: true; project: Project } | { ok: false; error: string } {
   const p = store.get(id)
   if (!p) return { ok: false, error: "项目不存在" }
+  if (p.archivedAt && Object.keys(patch).some((k) => k !== "archived")) return { ok: false, error: "项目已归档（只读）。需要修改请先恢复" }
   if (patch.members) {
     if (patch.members.some((m) => !MEMBER_ROLES[m.role])) return { ok: false, error: "角色不正确" }
     if (!patch.members.some((m) => m.role === "lead")) return { ok: false, error: "项目至少要有一位负责人" }
@@ -127,6 +157,13 @@ export function updateProject(id: string, patch: ProjectPatch): { ok: true; proj
       ? Array.from(new Map(patch.members.map((m) => [m.email, m])).values())
       : p.members,
   }
+  if (patch.conditions) {
+    const c = cleanConditions(patch.conditions)
+    if (!c.ok) return c
+    next.conditions = c.conditions
+  }
+  if (patch.archived === true && !p.archivedAt) Object.assign(next, { archivedAt: Date.now(), archivedBy: actor })
+  if (patch.archived === false) Object.assign(next, { archivedAt: undefined, archivedBy: undefined })
   store.set(id, next)
   return { ok: true, project: next }
 }

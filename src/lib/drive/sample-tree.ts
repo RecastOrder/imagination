@@ -46,6 +46,7 @@ const housing = folder(
     folder(`${H}/00`, "00 收件箱", [file(`${H}/00/note`, "待整理-截图说明.txt", "inbox-note.txt", 64, 20)]),
     folder(`${H}/01`, "01 资料依据", [
       file(`${H}/01/brief`, "设计任务书.md", "brief.md", 576, 10),
+      file(`${H}/01/conditions`, "规划设计条件通知书.pdf", "planning-conditions.pdf", 3202, 6),
       file(`${H}/01/report`, "日照分析报告.pdf", "sunlight-report.pdf", 4922, 16),
       file(`${H}/01/units`, "户型面积表.csv", "units.csv", 102, 12),
     ]),

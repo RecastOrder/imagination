@@ -44,3 +44,4 @@
 - [011 后端地基：数据存进数据库](./011-backend-foundation.md)
 - [012 新建项目](./012-new-project.md)
 - [013 问题：标注平时自己看，想给别人看就发起问题](./013-issues.md)
+- [014 规划条件录入（手动 + PDF 识别）与项目归档](./014-conditions-archive.md)
