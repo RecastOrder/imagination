@@ -48,3 +48,8 @@ next-env.d.ts
 
 # 数据库文件（第 ③ 步）：服务器上的真实数据，不提交
 /.data/
+
+# 部署：配置模板要提交，真实配置和数据不提交
+!deploy/.env.example
+/deploy/data/
+/deploy/caddy/
