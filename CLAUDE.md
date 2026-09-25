@@ -16,6 +16,7 @@
 - 响应式断点：<768 手机（抽屉）/ 768–1024 平板 / ≥1024 桌面（分栏）。
 - “手机 / 桌面显示哪套布局”优先用 CSS 断点（`hidden md:flex`），不要只靠 JS 判断——否则服务端首屏会先闪一下错误布局。
 - 只有真正依赖网址参数的页面才包 `<Suspense>`（配 `PageSkeleton`），不要在外壳层读网址参数，否则整个应用区首屏空白。
+- 资料一律从资料仓库取：服务端 `sourcesRepo()`（`src/lib/server/sources-repo.ts`，`SOURCES_BACKEND=mock|cairn-kb`），前端 `useSourceList()` / `useSource(id)`（`src/hooks/use-sources.ts`，走 `/api/sources`，必须登录）。**新代码不要再直接 import `src/lib/sources/mock.ts`**（现存的对话、项目、笔记本、文件浏览还在读它，是待迁移的旧路）。资料卡里没有的字段不编：效力状态读不到 = `unverified`（显示“未核对”），**永不默认“现行”**；“已过时”只认 `isOutdated()`（superseded / abolished）。线上：imagination.recastorder.com 用 `cairn-kb`（见 Cairn-Specs 105）。
 - 资料的权威等级（`src/lib/sources/kinds.ts`）：1 规范规章 · 2 图集 · 3 期刊论文 · 4 案例 · 5 个人笔记。严谨模式只引用 1–2。
 - 服务端数据一律存数据库：`collection()`（`src/lib/server/db.ts`，SQLite 文件 `.data/imagination.db`，以后可换 PostgreSQL）；不要再用内存 Map 存业务数据。项目成员需要共享的数据必须走服务端接口。只属于个人、暂未迁移的（笔记本、上传记录）仍在 `src/lib/local-store.ts`（localStorage）。备份：`npm run db:backup`。
 - 登录：邮箱验证码 + **邀请制**（只有 `src/lib/server/members.ts` 名单里的工作邮箱能登录，拒绝个人邮箱）。会话存在服务器、Cookie 只放签名的会话编号（`src/lib/server/session.ts`），30 天有效，**每账号 1 台电脑 + 1 台手机**，同类设备新登录挤掉旧的。`src/proxy.ts` 拦截未登录访问；**每个接口仍须自己调用 `getCurrentUser()` 校验**。
