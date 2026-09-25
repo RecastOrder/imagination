@@ -12,13 +12,15 @@ import { runChecks } from "@/lib/projects/checks"
 import type { ProjectRef } from "@/lib/projects/refs"
 import { MEMBER_ROLES, type Project, type ProjectAccess } from "@/lib/projects/types"
 import { cn } from "@/lib/utils"
+import type { Issue } from "@/lib/drive/issues"
 import { ChecksTab } from "./checks-tab"
+import { IssuesTab } from "./issues-tab"
 import { MembersTab } from "./members-tab"
 import { OverviewTab } from "./overview-tab"
 import { RefsTab } from "./refs-tab"
 import { ToolsTab } from "./tools-tab"
 
-type Tab = "overview" | "refs" | "checks" | "members" | "tools"
+type Tab = "overview" | "refs" | "issues" | "checks" | "members" | "tools"
 
 /**
  * 项目页：以项目为单位看位置与适用要求、依据清单、指标核对、成员和分析工具。
@@ -27,12 +29,15 @@ type Tab = "overview" | "refs" | "checks" | "members" | "tools"
 export function ProjectView({
   initial,
   initialRefs,
+  issues,
   access,
   directory,
 }: {
   initial: Project
   /** 依据清单（服务端读好的，项目成员共享） */
   initialRefs: ProjectRef[]
+  /** 项目文件上发起的问题 */
+  issues: Issue[]
   access: ProjectAccess
   directory: { email: string; name: string }[]
 }) {
@@ -65,6 +70,7 @@ export function ProjectView({
   const TABS: { value: Tab; label: string; count?: number; alert?: boolean }[] = [
     { value: "overview", label: "概况" },
     { value: "refs", label: "依据清单", count: refCount },
+    { value: "issues", label: "问题", count: issues.filter((i) => i.status === "open").length || undefined },
     { value: "checks", label: "指标核对", count: fails || undefined, alert: fails > 0 },
     { value: "members", label: "成员", count: project.members.length },
     { value: "tools", label: "分析工具" },
@@ -119,6 +125,7 @@ export function ProjectView({
         <div className="py-6">
           {tab === "overview" && <OverviewTab project={project} refs={refs} canEdit={access.canManage} onSave={save} />}
           {tab === "refs" && <RefsTab projectId={project.id} refs={refs} onRefsChange={setRefs} canEdit={access.canEdit} />}
+          {tab === "issues" && <IssuesTab issues={issues} />}
           {tab === "checks" && <ChecksTab key={JSON.stringify(project.metrics)} project={project} canEdit={access.canEdit} onSave={save} />}
           {tab === "members" && <MembersTab project={project} access={access} directory={directory} onSave={save} />}
           {tab === "tools" && <ToolsTab project={project} />}

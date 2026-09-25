@@ -43,3 +43,4 @@
 - [010 权限：项目三档角色 + 个人文件共享](./010-permissions-sharing.md)
 - [011 后端地基：数据存进数据库](./011-backend-foundation.md)
 - [012 新建项目](./012-new-project.md)
+- [013 问题：标注平时自己看，想给别人看就发起问题](./013-issues.md)

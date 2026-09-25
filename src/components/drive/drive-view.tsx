@@ -168,6 +168,7 @@ export function DriveView({
     (n: DriveNode) => {
       const next = new URLSearchParams(params.toString())
       next.set("f", n.id)
+      next.delete("issue")
       router.replace(`${pathname}?${next.toString()}`, { scroll: false })
       if (n.type === "file" && n.archive) loadArchive(n)
       if (n.type !== "folder") setDrawer(false)
@@ -373,7 +374,7 @@ export function DriveView({
           ) : selected.type === "source" ? (
             <SourceViewer sourceId={selected.sourceId} />
           ) : (
-            <ViewerHost file={selected} archiveUrl={archiveUrl} readOnly={access !== "edit"} />
+            <ViewerHost file={selected} archiveUrl={archiveUrl} readOnly={access !== "edit"} focusIssue={params.get("issue")} />
           )}
         </div>
         {info && selected?.type === "file" && <InfoPanel file={selected} path={crumbs.slice(0, -1).map((c) => c.name).join(" / ")} />}

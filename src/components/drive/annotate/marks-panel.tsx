@@ -1,6 +1,7 @@
 "use client"
 
-import { BookmarkPlusIcon, MapPinIcon, RulerIcon, SquareDashedIcon, Trash2Icon, XIcon } from "lucide-react"
+import { useState } from "react"
+import { BookmarkPlusIcon, MapPinIcon, MessageSquareShareIcon, RulerIcon, SquareDashedIcon, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { SaveToNotebook } from "@/components/notebook/save-to-notebook"
@@ -14,22 +15,27 @@ const KIND = {
   measure: { label: "测量", icon: RulerIcon },
 } as const
 
-/** 右侧标注列表：按页排列；选中的可以写批注、删除、存入笔记本 */
+/**
+ * “我的标注”：只有自己看得到。按页排列；选中的可以写批注、删除、存入笔记本，
+ * 或者“发起问题”——把这条标注交给能看这个文件的人一起看、一起讨论（发起后从“我的标注”移到“问题”）。
+ */
 export function MarksPanel({
   api,
   fileId,
   fileName,
   unit,
-  onClose,
   onJump,
+  onRaise,
 }: {
   api: AnnotationsApi
   fileId: string
   fileName: string
   unit: "pt" | "px"
-  onClose: () => void
   onJump: (m: Mark) => void
+  /** 发起问题；没有编辑权限时不传 */
+  onRaise?: (m: Mark, title: string) => Promise<boolean>
 }) {
+  const [raising, setRaising] = useState<{ id: string; title: string } | null>(null)
   const { data, selectedId, setSelectedId, update, remove } = api
   const marks = [...data.marks].sort((a, b) => a.page - b.page)
   const globalScale = data.scales.all
@@ -40,14 +46,7 @@ export function MarksPanel({
   }
 
   return (
-    <aside aria-label="标注列表" className="flex w-72 shrink-0 flex-col border-l bg-surface">
-      <div className="flex items-center gap-2 border-b px-4 py-2.5">
-        <span className="text-sm font-medium">标注</span>
-        <span className="text-xs text-muted-foreground">{marks.length}</span>
-        <Button variant="ghost" size="icon-sm" className="ml-auto" onClick={onClose} aria-label="关闭标注列表">
-          <XIcon />
-        </Button>
-      </div>
+    <>
       <div className="border-b px-4 py-2.5 text-xs text-muted-foreground">
         {globalScale || Object.keys(data.scales).length ? (
           <span>
@@ -59,7 +58,13 @@ export function MarksPanel({
         )}
       </div>
       <ul className="min-h-0 flex-1 overflow-y-auto p-2">
-        {marks.length === 0 && <li className="px-2 py-8 text-center text-sm text-muted-foreground">还没有标注。选择上方的“标记”“框选”或“测量”开始。</li>}
+        {marks.length === 0 && (
+          <li className="px-2 py-8 text-center text-sm text-muted-foreground">
+            还没有标注。选择上方的“标记”“框选”或“测量”开始。
+            <br />
+            这里的标注只有你自己看得到。
+          </li>
+        )}
         {marks.map((m) => {
           const { label, icon: Icon } = KIND[m.kind]
           const sel = m.id === selectedId
@@ -89,7 +94,45 @@ export function MarksPanel({
                     placeholder={m.kind === "measure" ? "备注（可选）" : "写下批注…"}
                     className="block w-full resize-none rounded-md border border-input bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-ring"
                   />
-                  <div className="flex gap-1">
+                  {raising?.id === m.id ? (
+                    <form
+                      className="space-y-1.5 rounded-md border bg-surface p-2"
+                      onSubmit={async (e) => {
+                        e.preventDefault()
+                        if (raising.title.trim() && onRaise && (await onRaise(m, raising.title.trim()))) setRaising(null)
+                      }}
+                    >
+                      <p className="text-xs text-muted-foreground">发起后，能看这个文件的人都能看到并回复。</p>
+                      <input
+                        autoFocus
+                        value={raising.title}
+                        onChange={(e) => setRaising({ id: m.id, title: e.target.value })}
+                        placeholder="一句话说明问题"
+                        aria-label="问题说明"
+                        className="h-8 w-full rounded-md border border-input bg-surface px-2 text-sm outline-none focus:border-ring"
+                      />
+                      <div className="flex justify-end gap-1">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setRaising(null)}>
+                          取消
+                        </Button>
+                        <Button type="submit" size="sm" disabled={!raising.title.trim()}>
+                          发起问题
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {onRaise && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground"
+                        onClick={() => setRaising({ id: m.id, title: m.text || (m.kind === "measure" ? `尺寸核对：${describe(m)}` : "") })}
+                      >
+                        <MessageSquareShareIcon />
+                        发起问题
+                      </Button>
+                    )}
                     <SaveToNotebook
                       note={() => ({
                         kind: "memo",
@@ -108,12 +151,13 @@ export function MarksPanel({
                       删除
                     </Button>
                   </div>
+                  )}
                 </div>
               )}
             </li>
           )
         })}
       </ul>
-    </aside>
+    </>
   )
 }

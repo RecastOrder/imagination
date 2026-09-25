@@ -1,6 +1,6 @@
 "use client"
 
-import { CrosshairIcon, HandIcon, MapPinIcon, MessageSquareTextIcon, RulerIcon, SquareDashedIcon, type LucideIcon } from "lucide-react"
+import { CircleDotIcon, CrosshairIcon, HandIcon, MapPinIcon, MessageSquareTextIcon, RulerIcon, SquareDashedIcon, type LucideIcon } from "lucide-react"
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -24,6 +24,7 @@ export function AnnotateToolbar({
   calibrated,
   tools,
   note,
+  issues,
 }: {
   tool: Tool
   onTool: (t: Tool) => void
@@ -35,6 +36,8 @@ export function AnnotateToolbar({
   tools?: Tool[]
   /** 工具条末尾的说明 */
   note?: React.ReactNode
+  /** 问题（共享给能看这个文件的人）：进行中的数量 */
+  issues?: { open: number; active: boolean; onClick: () => void }
 }) {
   return (
     <div className="flex items-center gap-1">
@@ -76,6 +79,21 @@ export function AnnotateToolbar({
         <MessageSquareTextIcon className="size-3.5" />
         标注 {count}
       </button>
+      {issues && (
+        <button
+          type="button"
+          aria-pressed={issues.active}
+          onClick={issues.onClick}
+          title="问题：能看这个文件的人都看得到"
+          className={cn(
+            "flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground",
+            issues.active && "bg-accent text-foreground",
+          )}
+        >
+          <CircleDotIcon className="size-3.5" />
+          问题 {issues.open}
+        </button>
+      )}
       {note}
     </div>
   )

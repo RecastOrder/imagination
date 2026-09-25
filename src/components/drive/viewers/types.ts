@@ -7,4 +7,6 @@ export interface ViewerProps {
   src: string
   /** 仅浏览权限：不能标注、测量 */
   readOnly?: boolean
+  /** 打开后定位到这个问题（链接里的 ?issue=） */
+  focusIssue?: string | null
 }

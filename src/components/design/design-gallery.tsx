@@ -18,6 +18,9 @@ import { IdeaBlock } from "@/components/blocks/idea-block"
 import { NoticeBlock } from "@/components/blocks/notice-block"
 import { ModeSwitch } from "@/components/chat/mode-switch"
 import { AnnotationLayer } from "@/components/drive/annotate/annotation-layer"
+import { IssueLayer } from "@/components/drive/annotate/issue-layer"
+import { IssuesTab } from "@/components/projects/issues-tab"
+import type { Issue } from "@/lib/drive/issues"
 import { FormatMatrix } from "@/components/drive/format-matrix"
 import { UploadRow } from "@/components/files/upload-row"
 import type { UploadItem } from "@/components/files/use-uploader"
@@ -406,6 +409,32 @@ export function DesignGallery() {
         />
       </Section>
 
+      <Section
+        id="issues"
+        title="12. 问题：把标注交给别人看"
+        note="个人标注是实线、只有自己看得到；发起为问题后变成虚线 + “#编号”标签，能看这个文件的人都看得到；已关闭的变淡。"
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="relative aspect-[3/2] overflow-hidden rounded-lg border bg-paper">
+            <IssueLayer pageW={600} pageH={400} displayScale={1} issues={DEMO_ISSUES} selectedId="i1" onSelect={() => {}} />
+            <AnnotationLayer
+              page={1}
+              pageW={600}
+              pageH={400}
+              displayScale={1}
+              mmPerUnit={10}
+              tool="browse"
+              selectedId={null}
+              onSelect={() => {}}
+              onCreate={() => {}}
+              onCalibrate={() => {}}
+              marks={[{ id: "p1", kind: "rect", page: 1, x: 380, y: 80, w: 160, h: 110, text: "自己的标注" }]}
+            />
+          </div>
+          <IssuesTab issues={DEMO_ISSUES} />
+        </div>
+      </Section>
+
       <p className="flex items-center gap-1 text-sm text-muted-foreground">
         设计决策记录见仓库 <code className="font-mono">docs/design-journal/</code>
         <ArrowRightIcon className="size-3.5" />
@@ -413,6 +442,20 @@ export function DesignGallery() {
     </div>
   )
 }
+
+const DEMO_ISSUES: Issue[] = [
+  {
+    id: "i1", scope: "proj:demo", number: 1, fileId: "proj/demo/plan", fileName: "户型平面草图.png",
+    mark: { id: "m1", kind: "rect", page: 1, x: 60, y: 80, w: 220, h: 170, text: "" },
+    title: "起居室开间偏小，请复核", status: "open", author: "li.na@studio.cn", authorName: "李娜", createdAt: Date.UTC(2026, 8, 24),
+    replies: [{ id: "r1", author: "chen.jing@studio.cn", authorName: "陈静", text: "已看到", at: Date.UTC(2026, 8, 24, 3) }],
+  },
+  {
+    id: "i2", scope: "proj:demo", number: 2, fileId: "proj/demo/plan", fileName: "户型平面草图.png",
+    mark: { id: "m2", kind: "measure", page: 1, x1: 60, y1: 320, x2: 520, y2: 320, text: "" }, scale: 10,
+    title: "总面宽核对", status: "closed", author: "zhang.ming@studio.cn", authorName: "张明", createdAt: Date.UTC(2026, 8, 23), replies: [],
+  },
+]
 
 const DEMO_SHARES: Share[] = [
   { id: "demo1", owner: "demo@studio.cn", itemId: "me/demo@studio.cn/ref", itemName: "参考图片", folder: true, grantee: "li.na@studio.cn", level: "edit", createdAt: 0 },

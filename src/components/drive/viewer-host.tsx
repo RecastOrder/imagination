@@ -40,11 +40,13 @@ export function ViewerHost({
   file,
   archiveUrl,
   readOnly,
+  focusIssue,
 }: {
   file: DriveFile
   archiveUrl?: (archiveId: string) => string | undefined
   /** 仅浏览：查看器不显示标注工具 */
   readOnly?: boolean
+  focusIssue?: string | null
 }) {
   const format = formatOf(file.name)
   const Viewer = REGISTRY[format.viewer]
@@ -82,5 +84,5 @@ export function ViewerHost({
   if (!Viewer) return <PendingViewer name={file.name} size={file.size} href={file.url} />
   if (!state || state.id !== file.id) return <Skeleton className="m-8 h-[60vh]" />
   if ("error" in state) return <p className="p-8 text-center text-sm text-destructive">{state.error}</p>
-  return <Viewer key={file.id} fileId={file.id} name={file.name} blob={state.blob} src={state.src} readOnly={readOnly} />
+  return <Viewer key={file.id} fileId={file.id} name={file.name} blob={state.blob} src={state.src} readOnly={readOnly} focusIssue={focusIssue} />
 }
