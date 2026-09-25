@@ -1,7 +1,7 @@
 "use client"
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { getSource } from "@/lib/sources/mock"
+import { useSourceMeta } from "@/hooks/use-sources"
 import { cn } from "@/lib/utils"
 
 /** 引用编号 [1]：第一级“看到”。悬停显示标题，点击打开右侧预览 */
@@ -16,7 +16,7 @@ export function Citation({
   active?: boolean
   onOpen: (id: string) => void
 }) {
-  const source = getSource(sourceId)
+  const source = useSourceMeta(sourceId)
   return (
     <Tooltip>
       <TooltipTrigger asChild>

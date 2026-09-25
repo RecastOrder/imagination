@@ -39,6 +39,12 @@ export function useSourceList(): { sources: SourceMeta[]; regions: string[]; loa
   return { ...state, regions }
 }
 
+/** 按 id 取资料元信息（标题、编号等），用已缓存的列表，不取正文 —— 引用标签、资料卡片用 */
+export function useSourceMeta(id: string): SourceMeta | undefined {
+  const { sources } = useSourceList()
+  return sources.find((s) => s.id === id)
+}
+
 const fullCache = new Map<string, Source>()
 
 export function useSource(id: string): { source?: Source; loading: boolean; missing: boolean } {

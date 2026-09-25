@@ -7,6 +7,7 @@ import { usePeek } from "@/hooks/use-peek"
 import { CHAT_MODES, type ChatMode } from "@/lib/chat/modes"
 import { Composer } from "./composer"
 import { Thread } from "./thread"
+import { useCairnChat } from "./use-cairn-chat"
 import { useMockChat } from "./use-mock-chat"
 
 const EXAMPLES: { icon: LucideIcon; title: string; prompt: string }[] = [
@@ -21,8 +22,11 @@ const EXAMPLES: { icon: LucideIcon; title: string; prompt: string }[] = [
  * - 空状态：输入框居中 + 示例问题（告诉用户“能问什么”，比空白输入框更友好）
  * - 对话中：消息流在上，输入框固定在底部
  */
-export function ChatView() {
-  const { messages, send, stop, busy } = useMockChat()
+export function ChatView({ backend = "mock" }: { backend?: "mock" | "cairn" }) {
+  // 两个 hook 都调用（React 规则：hook 不能按条件调用），只用选中的那个
+  const mock = useMockChat()
+  const cairn = useCairnChat()
+  const { messages, send, stop, busy } = backend === "cairn" ? cairn : mock
   const { peekId, openPeek } = usePeek()
   // 模式是账户偏好：保存在服务器上，换电脑登录也沿用
   const { prefs, setPref } = useAccount()

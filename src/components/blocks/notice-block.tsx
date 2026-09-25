@@ -21,7 +21,7 @@ export function NoticeBlock({ block, ctx }: BlockProps<"notice">) {
       <Icon className={cn("mt-0.5 size-4 shrink-0", block.tone === "warning" ? "text-warning" : "text-muted-foreground")} />
       <div className="min-w-0">
         <p className="text-sm font-medium">{block.title}</p>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{block.content}</p>
+        <p className="mt-1 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">{block.content}</p>
         {block.action && ctx.onSwitchMode && (
           <Button variant="outline" size="sm" className="mt-3" onClick={() => ctx.onSwitchMode!(block.action!.switchTo)}>
             {(() => {

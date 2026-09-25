@@ -14,7 +14,7 @@ export default async function ChatPage() {
   return (
     <Suspense fallback={<PageSkeleton variant="chat" />}>
       <PeekLayout>
-        <ChatView />
+        <ChatView backend={process.env.CHAT_BACKEND === "cairn" ? "cairn" : "mock"} />
       </PeekLayout>
     </Suspense>
   )

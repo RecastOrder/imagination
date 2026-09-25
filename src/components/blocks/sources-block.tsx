@@ -1,11 +1,12 @@
 "use client"
 
 import { SourceCard } from "@/components/source/source-card"
-import { getSource } from "@/lib/sources/mock"
+import { useSourceList } from "@/hooks/use-sources"
 import type { BlockProps } from "./registry"
 
 export function SourcesBlock({ block, ctx }: BlockProps<"sources">) {
-  const sources = block.sourceIds.map(getSource).filter((s) => !!s)
+  const { sources: all } = useSourceList()
+  const sources = block.sourceIds.map((id) => all.find((s) => s.id === id)).filter((s) => !!s)
   return (
     <div>
       <p className="mb-2 text-xs font-medium text-muted-foreground">参考资料 · {sources.length}</p>
