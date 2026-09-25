@@ -153,6 +153,96 @@
 }
 
 /* 把语义令牌注册给 Tailwind：之后就能写 bg-surface、text-muted-foreground 等 */
+/*
+ * 冷色系（owner 2026-09-26「我们的浅色有暖色的，也做一个冷色的吧，加上对应的夜间模式」）。
+ * 色值取自 owner 指定的 Brain 三栏改版页（claude.ai artifact RgbxGtJMn8cxUGyTxrn2Le）：
+ * 纸面 #f3f4f3 · 墨 #151b1e · 强调青 #14636b · 砖红 / 苔绿 / 赭黄三个状态色；夜间一套同源。
+ * 冷暖（.cool）与日夜（.dark）是两个独立开关，四种组合。阅读高亮、批注红、原版纸张沿用默认（它们模拟的是纸和笔，不随主题变）。
+ */
+.cool {
+  --background: #f3f4f3;
+  --foreground: #151b1e;
+  --surface: #ffffff;
+  --surface-sunken: #e6eae9;
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+
+  --primary: #14636b;
+  --primary-foreground: #ffffff;
+  --primary-subtle: #e2eeee;
+  --primary-subtle-foreground: #14636b;
+
+  --secondary: #e6eae9;
+  --secondary-foreground: #3d4a4e;
+  --muted: #e6eae9;
+  --muted-foreground: #6b7a7e;
+  --accent: #e6eae9;
+  --accent-foreground: #151b1e;
+
+  --destructive: #b23a26;
+  --destructive-foreground: #ffffff;
+  --overlay: rgb(21 27 30 / 0.4);
+  --success: #4a6f43;
+  --warning: #8a6a12;
+
+  --border: #d3d9d8;
+  --border-strong: #c0c9c8;
+  --input: #c0c9c8;
+  --ring: #14636b;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #3d4a4e;
+  --sidebar-accent: #e6eae9;
+  --sidebar-accent-foreground: #151b1e;
+  --sidebar-border: #d3d9d8;
+
+  --shadow-color: 190 15% 20%;
+}
+
+.dark.cool {
+  --background: #0f1416;
+  --foreground: #e4eae9;
+  --surface: #161d20;
+  --surface-sunken: #1f292b;
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: #1c2427;
+  --popover-foreground: var(--foreground);
+
+  --primary: #5fb9bf;
+  --primary-foreground: #0f1416;
+  --primary-subtle: #152f31;
+  --primary-subtle-foreground: #5fb9bf;
+
+  --secondary: #1f292b;
+  --secondary-foreground: #b3c0c0;
+  --muted: #1f292b;
+  --muted-foreground: #839495;
+  --accent: #1f292b;
+  --accent-foreground: #e4eae9;
+
+  --destructive: #e08069;
+  --destructive-foreground: #0f1416;
+  --overlay: rgb(0 0 0 / 0.55);
+  --success: #8fb885;
+  --warning: #d3ac4b;
+
+  --border: #2a3538;
+  --border-strong: #3a474b;
+  --input: #3a474b;
+  --ring: #5fb9bf;
+
+  --sidebar: #161d20;
+  --sidebar-foreground: #b3c0c0;
+  --sidebar-accent: #1f292b;
+  --sidebar-accent-foreground: #e4eae9;
+  --sidebar-border: #2a3538;
+
+  --shadow-color: 0 0% 0%;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
