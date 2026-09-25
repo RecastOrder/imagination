@@ -2,6 +2,7 @@ import type { AccessLevel } from "@/lib/access"
 import { findNode, myTree, ownerOf } from "@/lib/drive/sample-tree"
 import { bestLevel, covers, type Share } from "@/lib/drive/shares"
 import { collection } from "./db"
+import { DEMO_DATA } from "./env"
 import { findMember, isAdmin } from "./members"
 
 /**
@@ -34,7 +35,7 @@ const SEED: Share[] = [
     createdAt: Date.UTC(2026, 8, 21),
   },
 ]
-const store = collection<Share>("shares", () => SEED.map((s) => [s.id, { ...s }]))
+const store = collection<Share>("shares", () => (DEMO_DATA ? SEED.map((s) => [s.id, { ...s }]) : []))
 
 export function listAllShares(): Share[] {
   return [...store.values()]

@@ -1,5 +1,6 @@
 import { REF_CATEGORIES, type NewProjectRef, type ProjectRef } from "@/lib/projects/refs"
 import { collection } from "./db"
+import { DEMO_DATA } from "./env"
 
 /** 项目依据清单（服务端）：项目成员共享。能不能读写由调用方按项目权限先判断 */
 const now = Date.UTC(2026, 8, 21)
@@ -37,7 +38,7 @@ const SEED: ProjectRef[] = [
   },
 ]
 
-const store = collection<ProjectRef>("project_refs", () => SEED.map((r) => [r.id, r]))
+const store = collection<ProjectRef>("project_refs", () => (DEMO_DATA ? SEED.map((r) => [r.id, r]) : []))
 
 export function listRefs(projectId: string): ProjectRef[] {
   return store

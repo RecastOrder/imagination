@@ -1,11 +1,39 @@
 import { MEMBERS, ROLES, resolve, type Member, type RoleId } from "@/lib/auth/permissions"
 import { collection } from "./db"
+import { DEMO_DATA } from "./env"
 
 /**
  * 成员名单（邀请制）：只有名单里的邮箱才能登录。
  * 存在数据库里（db.ts），第一次启动时写入 permissions.ts 里的示例成员。
  */
-const store = collection<Member>("members", () => MEMBERS.map((m) => [m.email, { ...m }]))
+const seeded = collection<Member>("members", () => (DEMO_DATA ? MEMBERS.map((m) => [m.email, { ...m }]) : []))
+
+/**
+ * 第一位管理员：正式服务器上没有演示成员，用环境变量 INITIAL_ADMIN_EMAIL 指定，
+ * 启动后这个邮箱就是管理员，可以登录再邀请其他人。
+ */
+let ensured = false
+function members() {
+  if (!ensured) {
+    ensured = true
+    const email = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase()
+    if (email && !seeded.get(email)) {
+      seeded.set(email, {
+        id: "u-admin",
+        email,
+        name: email.split("@")[0],
+        dept: "",
+        role: "admin",
+        status: "active",
+        featureOverrides: {},
+        usage: { storageGB: 0, aiThisMonth: 0 },
+        invitedAt: Date.now(),
+        invitedBy: "INITIAL_ADMIN_EMAIL",
+      })
+    }
+  }
+  return seeded
+}
 
 /** 常见个人邮箱域名：邀请时拒绝，要求使用工作单位邮箱 */
 export const PERSONAL_MAIL_DOMAINS = [
@@ -19,15 +47,15 @@ export function isPersonalMail(email: string) {
 }
 
 export function findMember(email: string): Member | undefined {
-  return store.get(email)
+  return members().get(email)
 }
 
 export function listMembers(): Member[] {
-  return [...store.values()].sort((a, b) => (a.invitedAt ?? 0) - (b.invitedAt ?? 0))
+  return [...members().values()].sort((a, b) => (a.invitedAt ?? 0) - (b.invitedAt ?? 0))
 }
 
 export function isAdmin(email: string) {
-  const m = store.get(email)
+  const m = members().get(email)
   return !!m && m.status !== "disabled" && resolve(m).features.admin.on
 }
 
@@ -35,7 +63,7 @@ export type InviteResult = { ok: true; member: Member } | { ok: false; error: st
 
 export function inviteMember(input: { email: string; name?: string; role: RoleId; invitedBy: string }): InviteResult {
   if (isPersonalMail(input.email)) return { ok: false, error: "这是个人邮箱。平台只接受工作单位邮箱，请换成对方的单位邮箱" }
-  if (store.has(input.email)) return { ok: false, error: "这个邮箱已经在成员名单里" }
+  if (members().has(input.email)) return { ok: false, error: "这个邮箱已经在成员名单里" }
   if (!ROLES[input.role]) return { ok: false, error: "角色不存在" }
   const member: Member = {
     id: `u${Date.now().toString(36)}`,
@@ -49,13 +77,13 @@ export function inviteMember(input: { email: string; name?: string; role: RoleId
     invitedAt: Date.now(),
     invitedBy: input.invitedBy,
   }
-  store.set(input.email, member)
+  members().set(input.email, member)
   return { ok: true, member }
 }
 
 /** 管理员修改成员（角色、单独调整、状态）。邮箱和用量不允许通过这里改 */
 export function updateMember(email: string, patch: Partial<Member>): Member | null {
-  const cur = store.get(email)
+  const cur = members().get(email)
   if (!cur) return null
   const next: Member = {
     ...cur,
@@ -67,20 +95,20 @@ export function updateMember(email: string, patch: Partial<Member>): Member | nu
     collections: "collections" in patch ? patch.collections : cur.collections,
     quota: "quota" in patch ? patch.quota : cur.quota,
   }
-  store.set(email, next)
+  members().set(email, next)
   return next
 }
 
 /** 撤销邀请：只能撤销还没登录过的 */
 export function revokeInvite(email: string): boolean {
-  const cur = store.get(email)
+  const cur = members().get(email)
   if (!cur || cur.status !== "invited") return false
-  store.delete(email)
+  members().delete(email)
   return true
 }
 
 export function markLogin(email: string) {
-  const cur = store.get(email)
+  const cur = members().get(email)
   if (!cur) return
-  store.set(email, { ...cur, status: cur.status === "invited" ? "active" : cur.status, lastLoginAt: Date.now() })
+  members().set(email, { ...cur, status: cur.status === "invited" ? "active" : cur.status, lastLoginAt: Date.now() })
 }

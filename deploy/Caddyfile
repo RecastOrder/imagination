@@ -1,0 +1,9 @@
+# Caddy 会自动为这个域名申请并续期 HTTPS 证书（Let's Encrypt）
+{$DOMAIN} {
+	encode zstd gzip
+	# 上传大文件（图纸、模型）
+	request_body {
+		max_size 2GB
+	}
+	reverse_proxy app:3000
+}

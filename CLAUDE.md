@@ -54,3 +54,5 @@
 
 - `npm run dev`：开发服务器
 - `npm run lint` / `npx tsc --noEmit` / `npm run build`：提交前检查
+- 本地跑正式模式：`AUTH_SECRET=$(openssl rand -base64 48) DATA_DIR=/tmp/x DEMO_DATA=1 AUTH_DEMO=on npm run start`（正式环境缺 `AUTH_SECRET` 会拒绝启动；不设 `DEMO_DATA=1` 没有示例数据；验证码只在 `AUTH_DEMO=on` 时显示在页面上）
+- 部署：见 `docs/deploy.md`（Docker + Caddy，数据在 `deploy/data/`）

@@ -2,6 +2,7 @@ import { PROJECT_SEED } from "@/lib/projects/seed"
 import { LOCATIONS } from "@/lib/projects/regional"
 import { MEMBER_ROLES, STAGES, TYPES, type MemberRole, type Project, type Condition, type ProjectAccess, type ProjectLocation, type ProjectMember } from "@/lib/projects/types"
 import { collection } from "./db"
+import { DEMO_DATA } from "./env"
 import { findMember, isAdmin } from "./members"
 
 /**
@@ -11,7 +12,7 @@ import { findMember, isAdmin } from "./members"
  * - 编辑内容（指标、依据清单、标注、文件）：负责人、可编辑成员、管理员
  * - 管理项目（名称、类型、阶段、位置、成员及其权限）：负责人、管理员
  */
-const store = collection<Project>("projects", () => PROJECT_SEED.map((p) => [p.id, structuredClone(p)]))
+const store = collection<Project>("projects", () => (DEMO_DATA ? PROJECT_SEED.map((p) => [p.id, structuredClone(p)]) : []))
 
 export function listProjectsFor(email: string): Project[] {
   const admin = isAdmin(email)

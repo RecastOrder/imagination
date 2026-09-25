@@ -1,4 +1,5 @@
 import { collection } from "./db"
+import { IS_PROD } from "./env"
 import { findMember } from "./members"
 
 /**
@@ -21,7 +22,14 @@ export const SESSION_MAX_AGE = 60 * 60 * 24 * 30 // 30 天（已定）
 export const MAX_SESSIONS_PER_DEVICE_TYPE = 1
 export const SINGLE_SESSION_PER_ACCOUNT = false
 
-const SECRET = process.env.AUTH_SECRET ?? "dev-only-secret-please-set-AUTH_SECRET"
+const DEV_SECRET = "dev-only-secret-please-set-AUTH_SECRET"
+/** 正式服务器必须设置 AUTH_SECRET（至少 32 位随机字符），否则拒绝签发和校验会话 */
+function secret() {
+  const s = process.env.AUTH_SECRET
+  if (s && s.length >= 32) return s
+  if (IS_PROD) throw new Error("生产环境必须设置 AUTH_SECRET（至少 32 个字符），见 deploy/.env.example")
+  return s || DEV_SECRET
+}
 
 export type DeviceType = "mobile" | "desktop"
 export type EndReason = "replaced" | "signed_out" | "revoked" | "disabled"
@@ -43,7 +51,7 @@ const TOUCH_INTERVAL_MS = 60 * 1000
 
 const enc = new TextEncoder()
 async function hmac(data: string) {
-  const key = await crypto.subtle.importKey("raw", enc.encode(SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
   return Buffer.from(await crypto.subtle.sign("HMAC", key, enc.encode(data))).toString("base64url")
 }
 
@@ -60,13 +68,15 @@ export async function createSession(email: string, userAgent: string) {
     .sort((a, b) => b.createdAt - a.createdAt)
   const keep = SINGLE_SESSION_PER_ACCOUNT ? 0 : MAX_SESSIONS_PER_DEVICE_TYPE - 1
   const replaced = active.slice(keep)
-  for (const s of replaced) store.set(s.sid, { ...s, endedAt: now, endReason: "replaced" })
 
   const sid = crypto.randomUUID()
-  store.set(sid, { sid, email, device, userAgent, createdAt: now, lastSeenAt: now })
   const exp = Math.floor(now / 1000) + SESSION_MAX_AGE
   const body = `${sid}.${exp}`
-  return { token: `${body}.${await hmac(body)}`, replaced: replaced.map((s) => s.device) }
+  // 先签名再保存：签名失败（例如没配密钥）时不留下半截会话，也不挤掉旧设备
+  const token = `${body}.${await hmac(body)}`
+  for (const s of replaced) store.set(s.sid, { ...s, endedAt: now, endReason: "replaced" })
+  store.set(sid, { sid, email, device, userAgent, createdAt: now, lastSeenAt: now })
+  return { token, replaced: replaced.map((s) => s.device) }
 }
 
 export type SessionCheck =

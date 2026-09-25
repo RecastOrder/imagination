@@ -2,6 +2,7 @@ import { createHash, randomInt } from "node:crypto"
 
 import { collection } from "./db"
 import { EMAIL_CONFIGURED, codeEmail, sendEmail } from "./email"
+import { IS_PROD } from "./env"
 
 /**
  * 邮箱验证码（存在数据库里，服务器重启不影响已发出的验证码）。
@@ -75,4 +76,8 @@ export function revokeCode(email: string) {
  * 演示模式：把验证码直接显示在登录页上。
  * 默认：没配置 Resend 时开启，配置后关闭；也可以用 AUTH_DEMO=on / off 强制指定。
  */
-export const DEMO_SHOW_CODE = process.env.AUTH_DEMO ? process.env.AUTH_DEMO === "on" : !EMAIL_CONFIGURED
+/**
+ * 演示模式：没有配置邮件时，把验证码直接显示在登录页上。
+ * ⚠️ 正式服务器上绝不能自动打开（否则任何人都能登录名单里的账号），只有显式设置 AUTH_DEMO=on 才打开。
+ */
+export const DEMO_SHOW_CODE = process.env.AUTH_DEMO ? process.env.AUTH_DEMO === "on" : !EMAIL_CONFIGURED && !IS_PROD
