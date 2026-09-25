@@ -6,7 +6,7 @@ import { BookOpenTextIcon, FolderPlusIcon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AddToProject } from "@/components/projects/add-to-project"
-import { getSource } from "@/lib/sources/mock"
+import { useSource } from "@/hooks/use-sources"
 import { SourceKindBadge } from "./source-kind-badge"
 import { SourceMeta } from "./source-meta"
 
@@ -26,7 +26,11 @@ export function SourcePeek({
   sectionId?: string | null
   onClose: () => void
 }) {
-  const source = getSource(sourceId)
+  const { source, loading } = useSource(sourceId)
+
+  if (loading) {
+    return <p className="p-8 text-center text-sm text-muted-foreground">正在打开…</p>
+  }
 
   if (!source) {
     return (

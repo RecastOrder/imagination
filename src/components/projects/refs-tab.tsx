@@ -8,6 +8,7 @@ import { SourceStatusTag } from "@/components/source/source-meta"
 import { toast } from "@/components/ui/toast"
 import { REF_CATEGORIES, removeProjectRef, type ProjectRef } from "@/lib/projects/refs"
 import { getSource } from "@/lib/sources/mock"
+import { isOutdated } from "@/lib/sources/types"
 
 /** 依据清单：按分类列出成员加进来的内容，点击回到原文 */
 export function RefsTab({
@@ -57,7 +58,7 @@ export function RefsTab({
                   <li key={r.id} className="group px-4 py-3">
                     <div className="flex items-start gap-2">
                       <p className="flex-1 text-sm font-medium">{r.title}</p>
-                      {s?.status && s.status !== "current" && <SourceStatusTag status={s.status} />}
+                      {s?.status && isOutdated(s) && <SourceStatusTag status={s.status} />}
                       {canEdit && (
                         <Button
                           variant="ghost"

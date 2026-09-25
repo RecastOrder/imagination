@@ -1,4 +1,4 @@
-import type { Source, SourceFilters, SourceKind } from "./types"
+import type { SourceFilters, SourceKind, SourceMeta } from "./types"
 import { SOURCE_KINDS } from "./kinds"
 
 type Params = Record<string, string | string[] | undefined> | URLSearchParams
@@ -35,7 +35,7 @@ export function filtersToSearch(f: SourceFilters): string {
   return s ? `?${s}` : ""
 }
 
-export function matchSource(s: Source, f: SourceFilters): boolean {
+export function matchSource(s: SourceMeta, f: SourceFilters): boolean {
   if (f.kinds.length && !f.kinds.includes(s.kind)) return false
   if (f.regions.length && !f.regions.includes(s.region)) return false
   if (f.yearFrom && s.year < f.yearFrom) return false

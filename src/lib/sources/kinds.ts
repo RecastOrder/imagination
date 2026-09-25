@@ -44,6 +44,7 @@ export const STATUS_LABELS: Record<SourceStatus, string> = {
   current: "现行",
   superseded: "已被替代",
   abolished: "已废止",
+  unverified: "未核对",
 }
 
 export const SOURCE_KIND_ORDER: SourceKind[] = [

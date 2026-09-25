@@ -4,8 +4,7 @@ import { CheckIcon } from "lucide-react"
 
 import { matchSource } from "@/lib/sources/filters"
 import { SOURCE_KIND_ORDER, SOURCE_KINDS } from "@/lib/sources/kinds"
-import { REGIONS, SOURCES } from "@/lib/sources/mock"
-import type { SourceFilters } from "@/lib/sources/types"
+import type { SourceFilters, SourceMeta } from "@/lib/sources/types"
 import { cn } from "@/lib/utils"
 
 const YEAR_PRESETS: { label: string; from?: number; to?: number }[] = [
@@ -20,9 +19,19 @@ const YEAR_PRESETS: { label: string; from?: number; to?: number }[] = [
  * 分面筛选（Faceted search）。每个选项后面的数字 =
  * “保留其他条件、只改这一项时会有多少结果”，让用户点之前就知道会不会“筛没了”。
  */
-export function Facets({ filters, onChange }: { filters: SourceFilters; onChange: (f: SourceFilters) => void }) {
+export function Facets({
+  sources,
+  regions,
+  filters,
+  onChange,
+}: {
+  sources: SourceMeta[]
+  regions: string[]
+  filters: SourceFilters
+  onChange: (f: SourceFilters) => void
+}) {
   const count = (patch: Partial<SourceFilters>) =>
-    SOURCES.filter((s) => matchSource(s, { ...filters, ...patch })).length
+    sources.filter((s) => matchSource(s, { ...filters, ...patch })).length
 
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
 
@@ -46,7 +55,7 @@ export function Facets({ filters, onChange }: { filters: SourceFilters; onChange
       </FacetGroup>
 
       <FacetGroup title="地区">
-        {REGIONS.map((r) => (
+        {regions.map((r) => (
           <FacetOption
             key={r}
             checked={filters.regions.includes(r)}

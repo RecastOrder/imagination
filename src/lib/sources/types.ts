@@ -17,7 +17,8 @@ export interface SourceSection {
 }
 
 /** 规范的效力状态：严谨模式下必须显示 */
-export type SourceStatus = "current" | "superseded" | "abolished"
+/** unverified = 我们还没有核对过它的效力状态（资料卡里没有这项）：不许默认成“现行” */
+export type SourceStatus = "current" | "superseded" | "abolished" | "unverified"
 
 /**
  * 权威等级：决定资料能否作为“有出处的结论”被引用。
@@ -45,6 +46,12 @@ export interface Source {
   pages: number
   sections: SourceSection[]
 }
+
+/** 列表、筛选、预览头部用的元信息：不含正文 */
+export type SourceMeta = Omit<Source, "sections">
+
+/** 已被替代或已废止：这两种才需要“请核对新版”的提醒；未核对不算 */
+export const isOutdated = (s?: { status?: SourceStatus }) => s?.status === "superseded" || s?.status === "abolished"
 
 /** 检索条件：URL 查询参数 ⇄ 这个对象 ⇄ 界面上的筛选标签，三者一一对应 */
 export interface SourceFilters {

@@ -1,6 +1,6 @@
 "use client"
 
-import type { Source } from "@/lib/sources/types"
+import type { SourceMeta as SourceMetaData } from "@/lib/sources/types"
 import { cn } from "@/lib/utils"
 import { SourceKindIcon } from "./source-kind-badge"
 import { SourceMeta } from "./source-meta"
@@ -16,7 +16,7 @@ export function SourceCard({
   density = "comfortable",
   onOpen,
 }: {
-  source: Source
+  source: SourceMetaData
   /** 在对话里显示引用编号 [1] */
   index?: number
   active?: boolean

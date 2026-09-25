@@ -262,6 +262,7 @@ export function DesignGallery() {
               <SourceStatusTag status="current" />
               <SourceStatusTag status="superseded" />
               <SourceStatusTag status="abolished" />
+              <SourceStatusTag status="unverified" />
             </p>
           </State>
           <State label="阅读高亮（荧光笔色，独立令牌）">
