@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useState } from "react"
 import { useRouter } from "next/navigation"
 
+import { toast } from "@/components/ui/toast"
+
 import type { Feature } from "@/lib/auth/permissions"
 import type { AccountPrefs } from "@/lib/server/prefs"
 
@@ -12,6 +14,12 @@ interface AccountContextValue {
   roleLabel: string
   /** 能否看到“管理”入口。只影响界面显示，接口会在服务端再校验 */
   isAdmin: boolean
+  /** 真正的管理员（不受对比视角影响）：只决定“对比视角”按钮显不显示 */
+  realAdmin: boolean
+  /** 当前是否在“以普通成员视角查看” */
+  viewingAsMember: boolean
+  /** 打开 / 关闭对比视角：保存到服务器后整页按新身份重新渲染 */
+  setViewAsMember: (on: boolean) => Promise<void>
   /** 各功能是否可用（同样只用于界面显示） */
   features: Record<Feature, boolean>
   /** 我参与的项目；canEdit = 我能往里加内容（“加入项目”只列这些） */
@@ -33,6 +41,8 @@ export function AccountProvider({
   name,
   roleLabel,
   isAdmin,
+  realAdmin,
+  viewingAsMember,
   features,
   projects,
   initialPrefs,
@@ -42,6 +52,8 @@ export function AccountProvider({
   name: string
   roleLabel: string
   isAdmin: boolean
+  realAdmin: boolean
+  viewingAsMember: boolean
   features: Record<Feature, boolean>
   projects: AccountContextValue["projects"]
   initialPrefs: AccountPrefs
@@ -67,13 +79,26 @@ export function AccountProvider({
       .catch(() => before && setPrefs(before))
   }, [])
 
+  const setViewAsMember = useCallback(
+    async (on: boolean) => {
+      const r = await fetch("/api/account/prefs", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ viewAsMember: on }),
+      })
+      if (r.ok) router.refresh()
+      else toast(r.status === 403 ? "只有管理员可以切换对比视角" : `切换没有成功（${r.status}），请再试一次`)
+    },
+    [router],
+  )
+
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" })
     router.push("/login")
     router.refresh()
   }, [router])
 
-  return <AccountContext.Provider value={{ email, name, roleLabel, isAdmin, features, projects, prefs, setPref, logout }}>{children}</AccountContext.Provider>
+  return <AccountContext.Provider value={{ email, name, roleLabel, isAdmin, realAdmin, viewingAsMember, setViewAsMember, features, projects, prefs, setPref, logout }}>{children}</AccountContext.Provider>
 }
 
 export function useAccount() {

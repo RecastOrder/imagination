@@ -14,5 +14,8 @@ export async function PATCH(req: Request) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 })
   const body = await req.json().catch(() => ({}))
-  return NextResponse.json(updatePrefs(user.email, body))
+  if (body?.viewAsMember === true && !user.realAdmin) {
+    return NextResponse.json({ error: "只有管理员可以切换对比视角" }, { status: 403 })
+  }
+  return NextResponse.json(updatePrefs(user.email, body, { realAdmin: user.realAdmin }))
 }

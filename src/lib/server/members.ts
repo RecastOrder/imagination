@@ -1,6 +1,7 @@
 import { MEMBERS, ROLES, resolve, type Member, type RoleId } from "@/lib/auth/permissions"
 import { currentRoster, rosterEnabled, rosterRole } from "./cairn-roster"
 import { collection } from "./db"
+import { getPrefs } from "./prefs"
 import { DEMO_DATA } from "./env"
 
 /**
@@ -101,7 +102,23 @@ export function listMembers(): Member[] {
   return all.sort((a, b) => (a.invitedAt ?? 0) - (b.invitedAt ?? 0))
 }
 
+/** 真正的管理员（不看对比视角）。只用于“能不能打开 / 关闭对比视角”这一件事 */
+export function isRealAdmin(email: string) {
+  const m = findMember(email)
+  return !!m && m.status !== "disabled" && resolve(m).features.admin.on
+}
+
+/** 管理员对比视角：打开时按普通成员看待（role 换成 standard、去掉单独调整） */
+export function asViewedMember(m: Member): Member {
+  return { ...m, role: "standard", featureOverrides: {} }
+}
+
+export function viewingAsMember(email: string) {
+  return isRealAdmin(email) && getPrefs(email).viewAsMember
+}
+
 export function isAdmin(email: string) {
+  if (viewingAsMember(email)) return false
   const m = findMember(email)
   return !!m && m.status !== "disabled" && resolve(m).features.admin.on
 }

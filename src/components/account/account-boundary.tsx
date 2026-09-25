@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/server/current-user"
 import { getPrefs } from "@/lib/server/prefs"
 import { canEditContent, listProjectsFor } from "@/lib/server/projects"
 import { AccountProvider } from "./account-provider"
+import { ViewAsBanner } from "./view-as"
 
 /**
  * 服务端：读取当前账户（成员信息、权限、偏好、参与的项目），交给前端的 AccountProvider。
@@ -19,10 +20,13 @@ export async function AccountBoundary({ children }: { children: React.ReactNode 
       name={user.member.name}
       roleLabel={ROLES[user.member.role].label}
       isAdmin={user.permissions.features.admin.on}
+      realAdmin={user.realAdmin}
+      viewingAsMember={user.viewingAsMember}
       features={Object.fromEntries(FEATURE_ORDER.map((f) => [f, user.permissions.features[f].on])) as Record<Feature, boolean>}
       projects={listProjectsFor(user.email).map((p) => ({ id: p.id, name: p.name, canEdit: canEditContent(p, user.email) }))}
       initialPrefs={getPrefs(user.email)}
     >
+      <ViewAsBanner />
       {children}
     </AccountProvider>
   )

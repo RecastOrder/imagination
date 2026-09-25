@@ -28,6 +28,7 @@ import type { Feature } from "@/lib/auth/permissions"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { Logo } from "./logo"
+import { ViewAsToggle } from "@/components/account/view-as"
 import { ThemeToggle } from "./theme-toggle"
 
 /**
@@ -174,7 +175,19 @@ export function Sidebar({
 
       {/* 底部 */}
       <div className={cn("mt-auto flex flex-col gap-2 border-t border-sidebar-border py-3", rail ? "items-center" : "px-3")}>
-        {rail ? <ThemeToggle compact /> : <ThemeToggle />}
+        {rail ? (
+          <>
+            <ThemeToggle compact />
+            <ViewAsToggle compact />
+          </>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              <ThemeToggle />
+            </div>
+            <ViewAsToggle />
+          </div>
+        )}
         <UserMenu rail={rail} onNavigate={onNavigate} />
       </div>
     </nav>
