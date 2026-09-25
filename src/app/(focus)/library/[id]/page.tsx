@@ -9,6 +9,8 @@ import { sourcesRepo } from "@/lib/server/sources-repo"
 export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: PageProps<"/library/[id]">): Promise<Metadata> {
+  // 标题也是资料的一部分：没登录不读仓库（proxy 之外再挡一层）
+  if (!(await getCurrentUser())) return { title: "资料" }
   const { id } = await params
   return { title: sourcesRepo().get(id)?.title ?? "资料" }
 }
