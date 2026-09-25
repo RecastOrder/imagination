@@ -353,7 +353,7 @@ export function DesignGallery() {
 
       <Section
         id="access"
-        title="11. 权限：三档角色与共享"
+        title="11. 权限：三档角色与平台内共享"
         note="项目和个人文件用同一套词：仅浏览 / 浏览 + 编辑；“管理”（改信息、调权限）只属于负责人、文件主人和管理员。下拉里每档都带一句“能做什么”。"
       >
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -386,7 +386,7 @@ export function DesignGallery() {
           <State label="共享面板（示例，不会真的保存）">
             <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
               <UsersIcon />
-              打开共享面板
+              打开访问权限面板
             </Button>
           </State>
         </div>
@@ -394,6 +394,8 @@ export function DesignGallery() {
           open={shareOpen}
           onOpenChange={setShareOpen}
           item={{ id: "me/demo@studio.cn/ref", name: "参考图片", folder: true }}
+          owner="demo@studio.cn"
+          me="demo@studio.cn"
           shares={shares}
           onSharesChange={setShares}
           demo

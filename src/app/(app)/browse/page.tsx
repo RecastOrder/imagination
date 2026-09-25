@@ -4,11 +4,11 @@ import type { Metadata } from "next"
 import { DriveView } from "@/components/drive/drive-view"
 import { NoAccess } from "@/components/shell/no-access"
 import { PageSkeleton } from "@/components/shell/page-skeleton"
-import { findNode, myTree } from "@/lib/drive/sample-tree"
+import { findNode, membersRoot, myTree } from "@/lib/drive/sample-tree"
 import { requireFeature } from "@/lib/server/guard"
-import { listMembers } from "@/lib/server/members"
+import { isAdmin, listMembers } from "@/lib/server/members"
 import { canEditContent, listProjectsFor } from "@/lib/server/projects"
-import { listSharedWith, listSharesBy } from "@/lib/server/shares"
+import { listAllShares, listSharedWith, listSharesBy } from "@/lib/server/shares"
 
 export const metadata: Metadata = { title: "文件浏览" }
 
@@ -16,6 +16,7 @@ export const metadata: Metadata = { title: "文件浏览" }
  * 能看到什么由服务端决定，不交给页面自己判断：
  * - 项目：成员才能看（管理员看全部），并带上我在每个项目里的档位
  * - 我的：自己的文件 + 别人共享给我的（带主人和档位）
+ * - 管理员：另外能看到全部成员的“我的”文件，并能管理其中的共享
  */
 export default async function BrowsePage() {
   const user = await requireFeature("library")
@@ -34,15 +35,26 @@ export default async function BrowsePage() {
       return node ? { node, share: s, ownerName: nameOf(s.owner) } : null
     })
     .filter((x) => !!x)
+  const admin = isAdmin(user.email)
+  const others = admin
+    ? membersRoot(
+        // 包括已停用（离职）的人：账号失效了，文件还在，管理员可以取出来转给项目
+        listMembers()
+          .filter((m) => m.email !== user.email && m.status !== "invited")
+          .map((m) => ({ name: `${m.name}的文件${m.status === "disabled" ? "（已停用）" : ""}`, tree: myTree(m.email) })),
+      )
+    : undefined
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
       <DriveView
         email={user.email}
+        isAdmin={admin}
         projects={projects}
         mine={myTree(user.email)}
         sharedWithMe={sharedWithMe}
-        myShares={listSharesBy(user.email)}
-        directory={members.filter((m) => m.email !== user.email).map((m) => ({ email: m.email, name: m.name }))}
+        others={others}
+        myShares={admin ? listAllShares() : listSharesBy(user.email)}
+        directory={members.map((m) => ({ email: m.email, name: m.name }))}
       />
     </Suspense>
   )

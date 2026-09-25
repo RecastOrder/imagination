@@ -22,6 +22,8 @@ export function AnnotateToolbar({
   panelOpen,
   onTogglePanel,
   calibrated,
+  tools,
+  note,
 }: {
   tool: Tool
   onTool: (t: Tool) => void
@@ -29,11 +31,15 @@ export function AnnotateToolbar({
   panelOpen: boolean
   onTogglePanel: () => void
   calibrated: boolean
+  /** 只显示这些工具（仅浏览权限时只有 浏览 / 测量 / 校准） */
+  tools?: Tool[]
+  /** 工具条末尾的说明 */
+  note?: React.ReactNode
 }) {
   return (
     <div className="flex items-center gap-1">
       <div role="radiogroup" aria-label="标注工具" className="flex rounded-md bg-secondary p-0.5">
-        {TOOLS.map(({ value, label, hint, icon: Icon, key }) => (
+        {TOOLS.filter((t) => !tools || tools.includes(t.value)).map(({ value, label, hint, icon: Icon, key }) => (
           <Tooltip key={value}>
             <TooltipTrigger asChild>
               <button
@@ -70,6 +76,7 @@ export function AnnotateToolbar({
         <MessageSquareTextIcon className="size-3.5" />
         标注 {count}
       </button>
+      {note}
     </div>
   )
 }

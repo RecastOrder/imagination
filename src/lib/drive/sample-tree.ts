@@ -7,7 +7,7 @@ import type { DriveNode } from "./types"
  * 文件浏览的三个空间（已定）：
  * - 公共：平台资料库（规范、图集、书籍…），按账号的资料范围权限显示
  * - 项目：只显示自己参与的项目；项目成员共享
- * - 我的：默认只有自己能看到；可以把文件 / 文件夹共享给同事（仅浏览 或 浏览 + 编辑）
+ * - 我的：自己和管理员能看到；可以在平台内把文件 / 文件夹开放给同事（仅浏览 或 浏览 + 编辑）
  * 演示阶段文件来自 public/samples/drive；上线后来自对象存储 / NAS / OneDrive。
  */
 export type Space = "public" | "project" | "mine"
@@ -22,7 +22,7 @@ export function spaceOf(id: string | null | undefined): Space | null {
   if (!id) return null
   if (id.startsWith("lib")) return "public"
   if (id.startsWith("proj/")) return "project"
-  if (id.startsWith("me/") || id === SHARED_ROOT_ID) return "mine"
+  if (id.startsWith("me/") || id === SHARED_ROOT_ID || id === MEMBERS_ROOT_ID) return "mine"
   return null
 }
 
@@ -103,7 +103,7 @@ export function myTree(email: string): DriveNode {
       folder(`${id}/ref`, "参考图片", [file(`${id}/ref/photo`, "街道界面参考.jpg", "site-photo.jpg", 109547, 9)]),
       folder(`${id}/meeting`, "会议纪要", [file(`${id}/meeting/0918`, "会议纪要-0918.txt", "minutes-0918.txt", 236, 18)]),
     ],
-    "默认仅自己可见",
+    "仅自己和管理员可见",
   )
 }
 
@@ -122,6 +122,17 @@ export function findNode(root: DriveNode, id: string): DriveNode | null {
     if (hit) return hit
   }
   return null
+}
+
+/** 管理员：全部成员的“我的”文件（管理员有全部权限） */
+export const MEMBERS_ROOT_ID = "members"
+export function membersRoot(trees: { name: string; tree: DriveNode }[]): DriveNode {
+  return folder(
+    MEMBERS_ROOT_ID,
+    "全部成员的文件",
+    trees.map(({ name, tree }) => (tree.type === "folder" ? { ...tree, name, hint: undefined } : tree)),
+    "管理员可见",
+  )
 }
 
 /** “共享给我的”：别人共享来的文件 / 文件夹，放在“我的”空间里自己的文件下面 */

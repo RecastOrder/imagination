@@ -50,21 +50,26 @@ import { SourceViewer } from "./viewers/source-viewer"
  */
 export function DriveView({
   email,
+  isAdmin,
   projects,
   mine,
   sharedWithMe,
+  others,
   myShares: initialShares,
   directory,
 }: {
   email: string
+  isAdmin: boolean
   projects: ProjectSummary[]
   /** 我的文件 */
   mine: DriveNode
   /** 别人共享给我的（节点 + 共享记录 + 主人名字） */
   sharedWithMe: { node: DriveNode; share: Share; ownerName: string }[]
-  /** 我共享出去的 */
+  /** 管理员：全部成员的“我的”文件 */
+  others?: DriveNode
+  /** 我共享出去的（管理员：全部共享记录） */
   myShares: Share[]
-  /** 可以共享给谁（单位成员，不含自己） */
+  /** 单位成员（可以共享给谁） */
   directory: { email: string; name: string }[]
 }) {
   const router = useRouter()
@@ -74,7 +79,10 @@ export function DriveView({
   // 当前空间：选中的文件属于哪个空间就是哪个；没选文件时看网址参数，默认先看项目
   const space: Space =
     spaceOf(selectedId) ?? (params.get("space") as Space | null) ?? (projects.length ? "project" : "public")
-  const mineRoots = useMemo(() => [mine, sharedRoot(sharedWithMe.map((x) => x.node))], [mine, sharedWithMe])
+  const mineRoots = useMemo(
+    () => [mine, sharedRoot(sharedWithMe.map((x) => x.node)), ...(others ? [others] : [])],
+    [mine, sharedWithMe, others],
+  )
   const roots = useMemo(() => rootsFor(space, projects, mineRoots), [space, projects, mineRoots])
   const everything = useMemo(() => allRoots(projects, mineRoots), [projects, mineRoots])
   const [myShares, setMyShares] = useState(initialShares)
@@ -199,13 +207,19 @@ export function DriveView({
     if (sp === "project") return projects.find((p) => p.id === id.split("/")[1])?.access ?? null
     const owner = ownerOf(id)
     if (!owner) return "view"
-    if (owner === email) return "edit"
+    if (owner === email || isAdmin) return "edit"
     return bestLevel(sharedWithMe.filter((x) => covers(x.share, id)).map((x) => x.share.level))
   }
   const access = selectedId ? accessFor(selectedId) : null
-  // 能共享的：自己“我的”里面的文件 / 文件夹（根目录和压缩包内部除外）
+  // 能设置访问权限的：自己“我的”里面的文件 / 文件夹；管理员可以管所有人的（根目录和压缩包内部除外）
+  const selectedOwner = selected ? ownerOf(selected.id) : null
   const shareable =
-    selected && selected.type !== "source" && ownerOf(selected.id) === email && selected.id !== mine.id && !selected.id.includes("!")
+    selected &&
+    selected.type !== "source" &&
+    !!selectedOwner &&
+    (selectedOwner === email || isAdmin) &&
+    selected.id !== `me/${selectedOwner}` &&
+    !selected.id.includes("!")
 
   // 目录树右侧的小标记：我共享出去的显示人数；共享给我的显示主人和档位
   const sharedCount = (id: string) => new Set(myShares.filter((s) => s.itemId === id).map((s) => s.grantee)).size
@@ -215,10 +229,10 @@ export function DriveView({
       return (
         <span className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground" title={`${inbound.ownerName} 共享 · ${inbound.share.level === "edit" ? "浏览 + 编辑" : "仅浏览"}`}>
           {inbound.ownerName}
-          {inbound.share.level === "view" ? <EyeIcon className="size-3" aria-label="仅浏览" /> : <PencilIcon className="size-3" aria-label="可编辑" />}
+          {isAdmin ? null : inbound.share.level === "view" ? <EyeIcon className="size-3" aria-label="仅浏览" /> : <PencilIcon className="size-3" aria-label="可编辑" />}
         </span>
       )
-    const c = ownerOf(n.id) === email ? sharedCount(n.id) : 0
+    const c = ownerOf(n.id) ? sharedCount(n.id) : 0
     return c > 0 ? (
       <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-muted-foreground" title={`已共享给 ${c} 人`}>
         <UsersIcon className="size-3" />
@@ -307,9 +321,9 @@ export function DriveView({
           </Badge>
         )}
         {shareable && (
-          <Button variant="ghost" size="sm" onClick={() => setSharing(true)} title="共享给同事">
+          <Button variant="ghost" size="sm" onClick={() => setSharing(true)} title="设置平台内哪些同事可以访问">
             <UsersIcon />
-            共享{sharedCount(selected.id) > 0 && <span className="text-muted-foreground tabular-nums">{sharedCount(selected.id)}</span>}
+            权限{sharedCount(selected.id) > 0 && <span className="text-muted-foreground tabular-nums">{sharedCount(selected.id)}</span>}
           </Button>
         )}
         {selected?.type === "file" && selected.url && !selected.zip && (
@@ -380,6 +394,8 @@ export function DriveView({
           open={sharing}
           onOpenChange={setSharing}
           item={{ id: selected.id, name: selected.name, folder: selected.type === "folder" }}
+          owner={selectedOwner!}
+          me={email}
           shares={myShares}
           onSharesChange={setMyShares}
           directory={directory}
@@ -488,7 +504,7 @@ function EmptyState() {
         <FolderTreeIcon className="size-8 text-muted-foreground" />
         <h2 className="mt-4 text-xl font-semibold">从左侧目录选择一个文件</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          上方切换三个空间：公共（资料库）、项目（你参与的项目）、我的（自己的文件和同事共享给你的）。用 ↑↓ 移动，→ 展开，Enter 打开。打开 PDF、图片、Office 后可以标注和测量。
+          上方切换三个空间：公共（资料库）、项目（你参与的项目）、我的（自己的文件和同事开放给你的）。用 ↑↓ 移动，→ 展开，Enter 打开。打开 PDF、图片、Office 后可以标注和测量。
         </p>
         {[
           ["现在就能直接打开", groups.full, "neutral"],

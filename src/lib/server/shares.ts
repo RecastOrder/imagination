@@ -1,13 +1,14 @@
 import type { AccessLevel } from "@/lib/access"
-import { findNode, myTree } from "@/lib/drive/sample-tree"
+import { findNode, myTree, ownerOf } from "@/lib/drive/sample-tree"
 import { bestLevel, covers, type Share } from "@/lib/drive/shares"
 import { findMember, isAdmin } from "./members"
 
 /**
  * 个人文件共享（服务端）。演示版存内存，上线换数据库。
  * 规则：
- * - 只有文件主人能共享、改档位、取消；管理员也可以取消（例如人员离职时收回）
- * - 只能共享给单位成员名单里、未停用的人
+ * - 共享只发生在平台内部：文件不复制、不发送、没有外部链接，只是让同事在平台里能打开
+ * - 文件主人和管理员可以共享、改档位、取消（管理员有全部权限，也能看所有人的“我的”文件）
+ * - 只能共享给单位成员名单里、未停用的人；人员离职（账号停用）后自动失去所有访问
  * - 同一个人对同一项只有一条记录，再次共享 = 改档位
  */
 const g = globalThis as unknown as { __shares?: Map<string, Share> }
@@ -35,6 +36,10 @@ const SEED: Share[] = [
 ]
 const store = (g.__shares ??= new Map(SEED.map((s) => [s.id, { ...s }])))
 
+export function listAllShares(): Share[] {
+  return [...store.values()]
+}
+
 export function listSharesBy(owner: string): Share[] {
   return [...store.values()].filter((s) => s.owner === owner)
 }
@@ -43,21 +48,25 @@ export function listSharedWith(email: string): Share[] {
   return [...store.values()].filter((s) => s.grantee === email && findMember(s.owner)?.status !== "disabled")
 }
 
-/** 某人对一个个人文件的权限：主人 = 编辑；否则看共享记录；都没有 = null */
+/** 某人对一个个人文件的权限：主人、管理员 = 编辑；否则看共享记录；都没有 = null */
 export function personalAccess(email: string, itemId: string, owner: string): AccessLevel | null {
-  if (email === owner) return "edit"
+  if (email === owner || isAdmin(email)) return "edit"
   return bestLevel(listSharedWith(email).filter((s) => covers(s, itemId)).map((s) => s.level))
 }
 
 type Result = { ok: true; share: Share } | { ok: false; error: string; status: number }
 
-export function grantShare(input: { owner: string; itemId: string; grantee: string; level: AccessLevel }): Result {
+export function grantShare(req: { actor: string; itemId: string; grantee: string; level: AccessLevel }): Result {
+  const owner = ownerOf(req.itemId)
+  if (!owner || !findMember(owner)) return { ok: false, error: "只能共享“我的”空间里的文件", status: 400 }
+  if (owner !== req.actor && !isAdmin(req.actor)) return { ok: false, error: "只有文件主人或管理员可以共享", status: 403 }
+  const input = { ...req, owner }
   if (input.level !== "view" && input.level !== "edit") return { ok: false, error: "档位不正确", status: 400 }
   const node = findNode(myTree(input.owner), input.itemId)
   if (!node || node.id === `me/${input.owner}`) {
-    return { ok: false, error: node ? "请选择具体的文件或文件夹共享" : "只能共享你自己的文件", status: 403 }
+    return { ok: false, error: node ? "请选择具体的文件或文件夹共享" : "文件不存在", status: node ? 400 : 404 }
   }
-  if (input.grantee === input.owner) return { ok: false, error: "不需要共享给自己", status: 400 }
+  if (input.grantee === input.owner) return { ok: false, error: "不需要共享给文件主人", status: 400 }
   const m = findMember(input.grantee)
   if (!m || m.status === "disabled") return { ok: false, error: "对方不在单位成员名单里，或账号已停用", status: 400 }
   const existing = [...store.values()].find((s) => s.itemId === input.itemId && s.grantee === input.grantee)
@@ -80,7 +89,7 @@ export function grantShare(input: { owner: string; itemId: string; grantee: stri
 function ownedOrAdmin(id: string, actor: string): Share | { error: string; status: number } {
   const s = store.get(id)
   if (!s) return { error: "共享记录不存在", status: 404 }
-  if (s.owner !== actor && !isAdmin(actor)) return { error: "只有文件主人可以修改共享", status: 403 }
+  if (s.owner !== actor && !isAdmin(actor)) return { error: "只有文件主人或管理员可以修改共享", status: 403 }
   return s
 }
 

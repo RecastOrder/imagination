@@ -10,12 +10,12 @@ export async function GET() {
   return NextResponse.json({ byMe: listSharesBy(user.email), withMe: listSharedWith(user.email) })
 }
 
-/** 共享：{ itemId, grantee, level }。只能共享自己的文件（服务端按 itemId 校验主人） */
+/** 共享：{ itemId, grantee, level }。主人或管理员才能共享（服务端按 itemId 找出主人再校验） */
 export async function POST(req: Request) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 })
   const body = await req.json().catch(() => ({}))
-  const r = grantShare({ owner: user.email, itemId: String(body.itemId ?? ""), grantee: String(body.grantee ?? "").trim().toLowerCase(), level: body.level })
+  const r = grantShare({ actor: user.email, itemId: String(body.itemId ?? ""), grantee: String(body.grantee ?? "").trim().toLowerCase(), level: body.level })
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status })
   return NextResponse.json(r.share)
 }

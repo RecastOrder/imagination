@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CheckIcon, LinkIcon, UserPlusIcon, XIcon } from "lucide-react"
+import { ShieldCheckIcon, UserPlusIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -11,15 +11,16 @@ import { covers, type Share } from "@/lib/drive/shares"
 import { LevelSelect } from "./access-menu"
 
 /**
- * 共享面板（参考 Google Drive / Figma / 飞书的“分享”）：
+ * 访问权限面板（参考 Google Drive / 飞书的“共享”，但只在平台内部）：
+ * 文件留在原处，不复制、不发送、没有外部链接——只是让单位里的某位同事在平台上也能打开它。
  *
- *   ┌ 共享「参考图片」 ───────────────────┐
- *   │ [选择同事 ▾] [仅浏览 ▾] [共享]      │ ← 加人
- *   │ 有权访问的人                        │
- *   │  你           所有者               │
- *   │  李娜         浏览 + 编辑 ▾   ×     │ ← 改档位 / 取消
- *   │  王磊         仅浏览（来自上级）      │ ← 继承，只读
- *   │ [复制链接]                  [完成]  │
+ *   ┌ 谁可以访问「参考图片」 ──────────────┐
+ *   │ [选择同事 ▾] [仅浏览 ▾] [添加]      │ ← 加人
+ *   │ 可以访问的人                        │
+ *   │  李娜（主人）  所有者 · 管理员        │
+ *   │  张明          浏览 + 编辑 ▾   ×     │ ← 改档位 / 取消
+ *   │  王磊          仅浏览（来自上级）      │ ← 继承，只读
+ *   │ 🛡 只在平台内部，不产生外部链接  [完成] │
  *   └────────────────────────────────────┘
  *
  * 每次改动立刻保存（不需要再点“保存”），失败则提示并保持原样。
@@ -28,6 +29,8 @@ export function ShareDialog({
   open,
   onOpenChange,
   item,
+  owner,
+  me,
   shares,
   onSharesChange,
   directory,
@@ -36,7 +39,11 @@ export function ShareDialog({
   open: boolean
   onOpenChange: (o: boolean) => void
   item: { id: string; name: string; folder: boolean }
-  /** 我共享出去的全部记录（面板里筛出和这一项有关的） */
+  /** 文件主人的邮箱（管理员替别人设置时，主人不是自己） */
+  owner: string
+  /** 当前登录的人 */
+  me: string
+  /** 共享记录（面板里筛出和这一项有关的） */
   shares: Share[]
   onSharesChange: (next: Share[]) => void
   directory: { email: string; name: string }[]
@@ -46,13 +53,12 @@ export function ShareDialog({
   const [grantee, setGrantee] = useState("")
   const [level, setLevel] = useState<AccessLevel>("view")
   const [busy, setBusy] = useState(false)
-  const [copied, setCopied] = useState(false)
 
   const direct = shares.filter((s) => s.itemId === item.id)
   // 上级文件夹的共享也覆盖这一项：列出来但不在这里改（去上级文件夹改）
   const inherited = shares.filter((s) => s.itemId !== item.id && covers(s, item.id))
   const nameOf = (email: string) => directory.find((d) => d.email === email)?.name ?? email.split("@")[0]
-  const candidates = directory.filter((d) => !direct.some((s) => s.grantee === d.email))
+  const candidates = directory.filter((d) => d.email !== owner && !direct.some((s) => s.grantee === d.email))
 
   const call = async (method: string, body?: Record<string, string>, query = "") => {
     if (demo) return fakeShare(shares, item, body, query)
@@ -80,7 +86,7 @@ export function ShareDialog({
     if (!s) return
     onSharesChange([...shares.filter((x) => x.id !== s.id), s])
     setGrantee("")
-    toast(`已共享给 ${nameOf(s.grantee)}（${level === "edit" ? "浏览 + 编辑" : "仅浏览"}）`)
+    toast(`${nameOf(s.grantee)} 现在可以访问（${level === "edit" ? "浏览 + 编辑" : "仅浏览"}）`)
   }
 
   const change = async (s: Share, l: AccessLevel) => {
@@ -95,19 +101,15 @@ export function ShareDialog({
     }
   }
 
-  const copy = async () => {
-    const url = `${location.origin}/browse?f=${encodeURIComponent(item.id)}`
-    await navigator.clipboard?.writeText(url).catch(() => {})
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
+  const ownerLabel = owner === me ? "你" : nameOf(owner)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(94vw,32rem)]">
-        <DialogTitle className="truncate pr-6">共享「{item.name}」</DialogTitle>
+        <DialogTitle className="truncate pr-6">谁可以访问「{item.name}」</DialogTitle>
         <DialogDescription>
-          {item.folder ? "文件夹里的所有文件（包括以后放进去的）都按同样的权限共享。" : "对方会在“文件浏览 · 我的 · 共享给我的”里看到它。"}
+          文件留在原处，不复制、不发送。选中的同事可以在平台里打开它（“文件浏览 · 我的 · 共享给我的”）。
+          {item.folder && "文件夹里的所有文件，包括以后放进去的，都按同样的权限。"}
         </DialogDescription>
 
         <form
@@ -130,17 +132,17 @@ export function ShareDialog({
               </option>
             ))}
           </select>
-          <LevelSelect value={level} onChange={setLevel} label="共享档位" />
+          <LevelSelect value={level} onChange={setLevel} label="访问档位" />
           <Button type="submit" disabled={!grantee || busy}>
             <UserPlusIcon />
-            共享
+            添加
           </Button>
         </form>
 
-        <p className="mt-5 mb-1.5 text-xs font-medium text-muted-foreground">有权访问的人</p>
+        <p className="mt-5 mb-1.5 text-xs font-medium text-muted-foreground">可以访问的人</p>
         <ul className="max-h-64 divide-y overflow-y-auto rounded-lg border">
           <li className="flex items-center gap-3 px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">你</span>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">{ownerLabel}</span>
             <span className="px-2 text-sm text-muted-foreground">所有者</span>
           </li>
           {direct.map((s) => (
@@ -150,7 +152,7 @@ export function ShareDialog({
                 <span className="block truncate text-xs text-muted-foreground">{s.grantee}</span>
               </span>
               <LevelSelect value={s.level} onChange={(l) => change(s, l)} label={`${nameOf(s.grantee)} 的权限`} />
-              <Button variant="ghost" size="icon-sm" disabled={busy} aria-label={`取消 ${nameOf(s.grantee)} 的访问`} title="取消共享" onClick={() => remove(s)}>
+              <Button variant="ghost" size="icon-sm" disabled={busy} aria-label={`取消 ${nameOf(s.grantee)} 的访问`} title="取消访问" onClick={() => remove(s)}>
                 <XIcon />
               </Button>
             </li>
@@ -159,20 +161,23 @@ export function ShareDialog({
             <li key={s.id} className="flex items-center gap-3 px-3 py-2">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm">{nameOf(s.grantee)}</span>
-                <span className="block truncate text-xs text-muted-foreground">来自上级文件夹「{s.itemName}」的共享</span>
+                <span className="block truncate text-xs text-muted-foreground">来自上级文件夹「{s.itemName}」</span>
               </span>
               <span className="px-2 text-sm text-muted-foreground">{s.level === "edit" ? "浏览 + 编辑" : "仅浏览"}</span>
             </li>
           ))}
+          {/* 如实告知：管理员有全部权限，能看到所有人的文件 */}
+          <li className="flex items-center gap-3 px-3 py-2 text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate text-sm">管理员</span>
+            <span className="px-2 text-sm">全部权限</span>
+          </li>
         </ul>
-        {direct.length === 0 && inherited.length === 0 && <p className="mt-2 text-xs text-muted-foreground">目前只有你自己能看到。</p>}
 
         <div className="mt-5 flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={copy}>
-            {copied ? <CheckIcon /> : <LinkIcon />}
-            {copied ? "已复制" : "复制链接"}
-          </Button>
-          <span className="hidden text-xs text-muted-foreground sm:inline">只有上面的人能打开</span>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheckIcon className="size-3.5 shrink-0" />
+            只在平台内部，没有外部链接
+          </p>
           <Button className="ml-auto" variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
             完成
           </Button>

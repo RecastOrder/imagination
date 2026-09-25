@@ -12,6 +12,8 @@ import { MarksPanel } from "./marks-panel"
 import { useAnnotations, type Tool } from "./use-annotations"
 
 const KEYS: Record<string, Tool> = { v: "browse", p: "pin", r: "rect", m: "measure", c: "calibrate" }
+/** 仅浏览的人：可以测量（量尺寸不改动文件），不能标记、框选 */
+const READONLY_TOOLS: Tool[] = ["browse", "measure", "calibrate"]
 
 /**
  * 把标注功能“装”到任意查看器上（PDF、图片、转换后的 Office 都用它）。
@@ -28,7 +30,7 @@ export function useAnnotator({
   fileName: string
   /** 页面单位：PDF 是点（pt），图片是像素（px） */
   unit: "pt" | "px"
-  /** 仅浏览：不显示工具、不响应快捷键（已有的标注仍然显示） */
+  /** 仅浏览：只能测量和校准，不能标记、框选 */
   readOnly?: boolean
   onJump?: (m: Mark) => void
 }) {
@@ -39,12 +41,11 @@ export function useAnnotator({
 
   // 快捷键：V P R M C 切换工具，Esc 回到浏览，Delete 删除选中的标注（在输入框里打字时不触发）
   useEffect(() => {
-    if (readOnly) return
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
       if (t.closest("input, textarea, [contenteditable=true]") || e.metaKey || e.ctrlKey || e.altKey) return
       const k = e.key.toLowerCase()
-      if (KEYS[k]) {
+      if (KEYS[k] && (!readOnly || READONLY_TOOLS.includes(KEYS[k]))) {
         setTool(KEYS[k])
         // 选了画图工具就先打开列表：让画面在开始画之前就定下来，不会画到一半突然变窄
         if (KEYS[k] !== "browse") setPanel(true)
@@ -58,13 +59,17 @@ export function useAnnotator({
     return () => window.removeEventListener("keydown", onKey)
   }, [readOnly, setTool, setSelectedId, selectedId, remove])
 
-  const toolbar = readOnly ? (
-    <span className="flex h-7 items-center gap-1 px-1 text-xs text-muted-foreground" title="你对这个文件是“仅浏览”权限">
-      <EyeIcon className="size-3.5" />
-      仅浏览，不能标注
-    </span>
-  ) : (
+  const toolbar = (
     <AnnotateToolbar
+      tools={readOnly ? READONLY_TOOLS : undefined}
+      note={
+        readOnly ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground" title="你对这个文件是“仅浏览”权限：测量结果只有你自己看得到">
+            <EyeIcon className="size-3.5" />
+            <span className="hidden lg:inline">仅浏览：可测量，不能标注</span>
+          </span>
+        ) : undefined
+      }
       tool={tool}
       onTool={(t) => {
         setTool(t)
@@ -85,7 +90,7 @@ export function useAnnotator({
       displayScale={displayScale}
       marks={data.marks.filter((m) => m.page === page)}
       mmPerUnit={scaleFor(data, page)}
-      tool={readOnly ? "browse" : tool}
+      tool={tool}
       selectedId={selectedId}
       onSelect={(id) => {
         setSelectedId(id)
@@ -99,7 +104,7 @@ export function useAnnotator({
     />
   )
 
-  const panelEl = panel && !readOnly ? (
+  const panelEl = panel ? (
     <MarksPanel api={api} fileId={fileId} fileName={fileName} unit={unit} onClose={() => setPanel(false)} onJump={(m) => onJump?.(m)} />
   ) : null
 
