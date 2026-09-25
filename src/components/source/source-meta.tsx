@@ -1,7 +1,7 @@
 import { LockIcon } from "lucide-react"
 
 import { STATUS_LABELS } from "@/lib/sources/kinds"
-import type { Source, SourceStatus } from "@/lib/sources/types"
+import type { SourceMeta as SourceMetaData, SourceStatus } from "@/lib/sources/types"
 import { cn } from "@/lib/utils"
 
 /** 规范效力状态：用状态色的小圆点 + 文字，不只靠颜色（WCAG：信息不能只用颜色传达） */
@@ -10,7 +10,13 @@ export function SourceStatusTag({ status }: { status: SourceStatus }) {
     <span
       className={cn(
         "inline-flex items-center gap-1 font-medium",
-        status === "current" ? "text-success" : status === "abolished" ? "text-destructive" : "text-warning",
+        status === "current"
+          ? "text-success"
+          : status === "abolished"
+            ? "text-destructive"
+            : status === "unverified"
+              ? "text-muted-foreground"
+              : "text-warning",
       )}
     >
       <span className="size-1.5 rounded-full bg-current" aria-hidden />
@@ -20,8 +26,8 @@ export function SourceStatusTag({ status }: { status: SourceStatus }) {
 }
 
 /** 元信息行：编号 · 作者 · 地区 · 年份。统一用中点分隔，弱化颜色 */
-export function SourceMeta({ source, className }: { source: Source; className?: string }) {
-  const parts = [source.code, source.authors?.join("、"), source.region, String(source.year)].filter(Boolean)
+export function SourceMeta({ source, className }: { source: SourceMetaData; className?: string }) {
+  const parts = [source.code, source.authors?.join("、"), source.region, source.year ? String(source.year) : undefined].filter(Boolean)
   return (
     <p className={cn("flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground", className)}>
       {parts.map((p, i) => (

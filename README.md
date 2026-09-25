@@ -15,6 +15,8 @@ npm run dev        # http://localhost:3000
 | `RESEND_API_KEY` | Resend 的 API Key。配置后真正发送验证码和邀请邮件，并自动关闭“验证码显示在页面上” |
 | `RESEND_FROM` | 发件人，如 `Imagination <noreply@你的域名>`（域名需先在 Resend 后台验证） |
 | `APP_URL` | 网站地址，用于邀请邮件里的链接，如 `https://imagination.yourfirm.com` |
+| `SOURCES_BACKEND` | 资料从哪来：`mock`（默认，演示资料）/ `cairn-kb`（Cairn 知识库的资料卡） |
+| `CAIRN_KB_SOURCES_DIR` | `SOURCES_BACKEND=cairn-kb` 时必填：资料卡目录（每份资料一个 `*.source.md`），只读 |
 | `AUTH_DEMO=on/off` | 强制开启 / 关闭“验证码显示在页面上”（默认：没配置 Resend 时开启） |
 
 服务器还需要安装（Office 预览用）：
@@ -42,4 +44,4 @@ sudo apt install libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-imp
 - 开发流程：[`docs/dev-process.md`](./docs/dev-process.md)
 - 设计决策日志：[`docs/design-journal/`](./docs/design-journal/)
 
-> 当前使用演示数据（`src/lib/sources/mock.ts`），资料正文均为占位文本；笔记、文件、偏好暂存在浏览器 localStorage。
+> 资料库与阅读页可以接真资料（`SOURCES_BACKEND=cairn-kb`，见 `src/lib/server/sources-repo.ts`）；其余部分仍是演示数据（`src/lib/sources/mock.ts`）；笔记、文件、偏好暂存在浏览器 localStorage。

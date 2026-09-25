@@ -14,6 +14,7 @@ import { changeFor } from "@/lib/projects/changes"
 import type { ProjectRef } from "@/lib/projects/refs"
 import { LOCATIONS, matchRequirements, type Level } from "@/lib/projects/regional"
 import type { Project, ProjectLocation } from "@/lib/projects/types"
+import { isOutdated } from "@/lib/sources/types"
 import { getSource } from "@/lib/sources/mock"
 import { cn } from "@/lib/utils"
 
@@ -43,7 +44,7 @@ export function OverviewTab({
   const alerts = matched
     .map((r) => {
       const s = r.sourceId ? getSource(r.sourceId) : undefined
-      const change = s && s.status && s.status !== "current" ? changeFor(s.id) : undefined
+      const change = isOutdated(s) ? changeFor(s!.id) : undefined
       if (!s || !change) return null
       return {
         source: s,
@@ -178,7 +179,7 @@ export function OverviewTab({
                   {list.map((r) => {
                     const s = r.sourceId ? getSource(r.sourceId) : undefined
                     return (
-                      <li key={r.id} className={cn("px-4 py-2.5", s?.status && s.status !== "current" && "bg-warning/5")}>
+                      <li key={r.id} className={cn("px-4 py-2.5", isOutdated(s) && "bg-warning/5")}>
                         {s ? (
                           <Link href={`/library/${s.id}`} className="group flex items-start gap-1 text-sm font-medium hover:text-primary">
                             <span className="flex-1">{r.title}</span>

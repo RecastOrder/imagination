@@ -1,7 +1,7 @@
 import { SOURCES, getSource } from "@/lib/sources/mock"
 import { matchSource } from "@/lib/sources/filters"
 import { SOURCE_KINDS } from "@/lib/sources/kinds"
-import type { SourceFilters } from "@/lib/sources/types"
+import { isOutdated, type SourceFilters } from "@/lib/sources/types"
 import type { ChatMode } from "./modes"
 import type { Block } from "./types"
 
@@ -14,7 +14,7 @@ const isAuthoritative = (id: string) => {
 
 /** 引用了“已被替代 / 已废止”的规范时，严谨模式必须提醒 */
 function statusNotice(ids: string[]): Block[] {
-  const outdated = ids.map(getSource).filter((s) => s && s.status && s.status !== "current")
+  const outdated = ids.map(getSource).filter((s) => isOutdated(s))
   return outdated.map((s) => ({
     type: "notice",
     tone: "warning",
