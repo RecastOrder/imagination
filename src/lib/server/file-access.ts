@@ -1,6 +1,6 @@
 import type { AccessLevel } from "@/lib/access"
 import { ownerOf } from "@/lib/drive/sample-tree"
-import { findMember } from "./members"
+import { findMember, listMembers } from "./members"
 import { canEditContent, canView, getProject } from "./projects"
 import { personalAccess } from "./shares"
 
@@ -27,4 +27,21 @@ export function issueScope(fileId: string): string | null {
   if (fileId.startsWith("proj/")) return `proj:${fileId.split("/")[1]}`
   const owner = ownerOf(fileId)
   return owner ? `me:${owner}` : null
+}
+
+/** 可以 @ 的人：能看这个文件、账号正常的单位成员（不含自己） */
+export function mentionable(fileId: string, me: string) {
+  return listMembers()
+    .filter((m) => m.status === "active" && m.email !== me && fileAccess(m.email, fileId))
+    .map((m) => ({ email: m.email, name: m.name }))
+}
+
+/** 检查 @ 的人：都得能看这个文件，否则提示先给对方权限 */
+export function checkMentions(fileId: string, raw: unknown): { ok: true; mentions: string[] } | { ok: false; error: string } {
+  if (raw === undefined) return { ok: true, mentions: [] }
+  if (!Array.isArray(raw) || raw.length > 20) return { ok: false, error: "提到的人太多了" }
+  const mentions = [...new Set(raw.map(String))]
+  const blocked = mentions.find((e) => !fileAccess(e, fileId))
+  if (blocked) return { ok: false, error: `${findMember(blocked)?.name ?? blocked} 看不到这个文件，先给对方权限再 @` }
+  return { ok: true, mentions }
 }

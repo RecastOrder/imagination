@@ -9,6 +9,7 @@ import { useAccount } from "@/components/account/account-provider"
 import { distance, formatLength } from "@/lib/drive/annotations"
 import { ISSUE_STATUS, type Issue } from "@/lib/drive/issues"
 import { cn } from "@/lib/utils"
+import { MentionInput, MentionText, mentionsIn } from "./mention-input"
 import type { IssuesApi } from "./use-issues"
 
 const when = (t: number) => new Date(t).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -82,7 +83,7 @@ export function IssuesPanel({
               <Icon className={cn("mt-0.5 size-3.5 shrink-0", i.status === "open" ? "text-markup" : "text-muted-foreground")} aria-label={ISSUE_STATUS[i.status]} />
               <span className="min-w-0 flex-1">
                 <span className={cn("block text-sm", i.status === "closed" && "text-muted-foreground line-through")}>
-                  <span className="font-medium tabular-nums">#{i.number}</span> {i.title}
+                  <span className="font-medium tabular-nums">#{i.number}</span> <MentionText text={i.title} />
                 </span>
                 <span className="block text-xs text-muted-foreground">
                   {i.authorName} · 第 {m.page} 页 · {when(i.createdAt)}
@@ -103,7 +104,9 @@ export function IssuesPanel({
                         <p className="text-xs text-muted-foreground">
                           <span className="font-medium text-foreground">{r.authorName}</span> · {when(r.at)}
                         </p>
-                        <p className="text-sm whitespace-pre-wrap">{r.text}</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                          <MentionText text={r.text} />
+                        </p>
                       </li>
                     ))}
                   </ul>
@@ -114,16 +117,17 @@ export function IssuesPanel({
                   onSubmit={async (e) => {
                     e.preventDefault()
                     if (!draft.trim()) return
-                    if (await run(() => api.reply(i.id, draft))) setDraft("")
+                    if (await run(() => api.reply(i.id, draft, mentionsIn(draft, api.people)))) setDraft("")
                   }}
                 >
-                  <textarea
+                  <MentionInput
+                    multiline
                     rows={2}
                     value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    placeholder="回复…"
+                    onChange={setDraft}
+                    people={api.people}
+                    placeholder="回复…（@ 提醒同事）"
                     aria-label={`回复问题 #${i.number}`}
-                    className="block w-full resize-none rounded-md border border-input bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-ring"
                   />
                   <div className="flex items-center gap-1">
                     {(canEdit || i.author === email) && (

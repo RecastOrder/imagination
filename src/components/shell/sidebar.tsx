@@ -23,6 +23,7 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useAccount } from "@/components/account/account-provider"
+import { NotificationBell } from "@/components/account/notification-bell"
 import type { Feature } from "@/lib/auth/permissions"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -93,6 +94,7 @@ export function Sidebar({
             <Logo />
           </Link>
         )}
+        {!rail && <NotificationBell className="ml-auto" />}
         {onToggle && (
           <RailTip label={rail ? "展开侧栏" : "收起侧栏"} show>
             <button
@@ -100,7 +102,7 @@ export function Sidebar({
               onClick={onToggle}
               className={cn(
                 "flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                !rail && "ml-auto",
+
               )}
               aria-label={rail ? "展开侧栏" : "收起侧栏"}
             >
@@ -111,6 +113,7 @@ export function Sidebar({
       </div>
 
       <div className={cn("flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
+        {rail && <NotificationBell side="right" className="mb-1 size-9" />}
         {features.chat && (
           <SidebarItem href="/chat" icon={SquarePenIcon} label="新建对话" rail={rail} onNavigate={onNavigate} />
         )}

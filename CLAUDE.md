@@ -25,7 +25,7 @@
 - 文件浏览：新增可预览格式 = 在 `src/lib/drive/formats.ts` 登记 + 在 `src/components/drive/viewer-host.tsx` 注册查看器；大体积库（PDF.js、three.js）用 `next/dynamic` 按需加载。PDF.js 必须用 `pdfjs-dist/legacy/build/pdf.mjs`（兼容旧浏览器）。浏览器端资源由 `scripts/copy-vendor.mjs` 复制到 `public/vendor`（不提交）。
 - 文件浏览分三个空间（`src/lib/drive/sample-tree.ts`）：公共 / 项目 / 我的；能看到哪些项目由服务端 `projectsFor()` 决定。
 - Office 预览：浏览器把文件内容 POST 到 `/api/preview/office`，服务器用 LibreOffice 转 PDF（`src/lib/server/office-convert.ts`，按内容哈希缓存在 `.cache/`），前端复用 PDF 查看器。
-- 标注与测量：`useAnnotator()`（`src/components/drive/annotate/annotator.tsx`）可装到任意分页查看器上；坐标用页面单位（PDF 点 / 图片像素），比例 = 每单位毫米数。批注和测量用 `--markup` 颜色，不要用强调色。个人标注存服务器、跟着账号走（`src/lib/server/annotations.ts`，按“人 + 文件”），只有自己看得到；要给别人看 = 发起“问题”（`src/lib/server/issues.ts`，按文件权限 `fileAccess()`：能看就能回复，能编辑才能发起 / 关闭），问题用虚线 + “#编号”与个人标注区分。
+- 标注与测量：`useAnnotator()`（`src/components/drive/annotate/annotator.tsx`）可装到任意分页查看器上；坐标用页面单位（PDF 点 / 图片像素），比例 = 每单位毫米数。批注和测量用 `--markup` 颜色，不要用强调色。个人标注存服务器、跟着账号走（`src/lib/server/annotations.ts`，按“人 + 文件”），只有自己看得到；要给别人看 = 发起“问题”（`src/lib/server/issues.ts`，按文件权限 `fileAccess()`：能看就能回复，能编辑才能发起 / 关闭），问题用虚线 + “#编号”与个人标注区分。通知（已定）：**只通知被 @ 的人**（`src/lib/server/notifications.ts`：站内铃铛 + Resend 邮件），只能 @ 能看这个文件的人（`checkMentions()`）。
 - 邮件：`src/lib/server/email.ts`（Resend）；邮件 HTML 只能用内联样式和具体色值（邮件客户端不支持 CSS 变量），这是“禁止原始色值”的唯一例外。
 - 同一个查看器不要在桌面 / 手机两套布局里各渲染一份（会重复加载、重复绑定快捷键）；只在浏览器端渲染的页面可以用 `useMinWidth` 选布局。
 - 文件：同名不同内容自动递增版本（`resolveVersion`，`src/lib/files/store.ts`），同名同内容不重复保存；历史版本永久保留。

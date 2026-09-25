@@ -168,13 +168,14 @@ export function useAnnotator({
   )
 
   // 发起问题：把这条标注交到服务器，成功后从“我的标注”里移走（避免同一处画两遍）
-  const raise = async (m: Mark, title: string) => {
+  const raise = async (m: Mark, title: string, mentions: string[]) => {
     try {
-      const i = await issuesApi.raise({ mark: m, title, scale: scaleFor(data, m.page), fileName })
+      const i = await issuesApi.raise({ mark: m, title, scale: scaleFor(data, m.page), fileName, mentions })
       remove(m.id)
       setIssueId(i.id)
       setTab("issues")
-      toast(`已发起问题 #${i.number}，能看这个文件的人都可以看到`)
+      const names = issuesApi.people.filter((p) => mentions.includes(p.email)).map((p) => p.name)
+      toast(`已发起问题 #${i.number}${names.length ? `，已通知 ${names.join("、")}` : "，能看这个文件的人都可以看到"}`)
       return true
     } catch (e) {
       toast((e as Error).message)
@@ -200,7 +201,7 @@ export function useAnnotator({
         </Button>
       </div>
       {tab === "marks" ? (
-        <MarksPanel api={api} fileId={fileId} fileName={fileName} unit={unit} onJump={(m) => onJump?.(m)} onRaise={readOnly ? undefined : raise} />
+        <MarksPanel api={api} fileId={fileId} fileName={fileName} unit={unit} onJump={(m) => onJump?.(m)} onRaise={readOnly ? undefined : raise} people={issuesApi.people} />
       ) : (
         <IssuesPanel api={issuesApi} canEdit={!readOnly} selectedId={issueId} onSelect={setIssueId} onJump={(i) => onJump?.(i.mark)} />
       )}

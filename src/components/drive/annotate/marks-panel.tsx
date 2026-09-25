@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { SaveToNotebook } from "@/components/notebook/save-to-notebook"
 import { distance, formatLength, paperRatio, scaleFor, type Mark } from "@/lib/drive/annotations"
 import { cn } from "@/lib/utils"
+import { MentionInput, mentionsIn, type Person } from "./mention-input"
 import type { AnnotationsApi } from "./use-annotations"
 
 const KIND = {
@@ -26,6 +27,7 @@ export function MarksPanel({
   unit,
   onJump,
   onRaise,
+  people = [],
 }: {
   api: AnnotationsApi
   fileId: string
@@ -33,7 +35,9 @@ export function MarksPanel({
   unit: "pt" | "px"
   onJump: (m: Mark) => void
   /** 发起问题；没有编辑权限时不传 */
-  onRaise?: (m: Mark, title: string) => Promise<boolean>
+  onRaise?: (m: Mark, title: string, mentions: string[]) => Promise<boolean>
+  /** 可以 @ 的人 */
+  people?: Person[]
 }) {
   const [raising, setRaising] = useState<{ id: string; title: string } | null>(null)
   const { data, selectedId, setSelectedId, update, remove } = api
@@ -99,17 +103,18 @@ export function MarksPanel({
                       className="space-y-1.5 rounded-md border bg-surface p-2"
                       onSubmit={async (e) => {
                         e.preventDefault()
-                        if (raising.title.trim() && onRaise && (await onRaise(m, raising.title.trim()))) setRaising(null)
+                        const title = raising.title.trim()
+                        if (title && onRaise && (await onRaise(m, title, mentionsIn(title, people)))) setRaising(null)
                       }}
                     >
-                      <p className="text-xs text-muted-foreground">发起后，能看这个文件的人都能看到并回复。</p>
-                      <input
+                      <p className="text-xs text-muted-foreground">发起后，能看这个文件的人都能看到并回复；输入 @ 可以提醒某人（只通知被 @ 的人）。</p>
+                      <MentionInput
                         autoFocus
                         value={raising.title}
-                        onChange={(e) => setRaising({ id: m.id, title: e.target.value })}
-                        placeholder="一句话说明问题"
+                        onChange={(v) => setRaising({ id: m.id, title: v })}
+                        people={people}
+                        placeholder="一句话说明问题，@ 提醒同事"
                         aria-label="问题说明"
-                        className="h-8 w-full rounded-md border border-input bg-surface px-2 text-sm outline-none focus:border-ring"
                       />
                       <div className="flex justify-end gap-1">
                         <Button type="button" variant="ghost" size="sm" onClick={() => setRaising(null)}>

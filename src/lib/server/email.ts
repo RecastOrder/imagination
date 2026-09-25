@@ -70,3 +70,16 @@ export function inviteEmail(opts: { inviter: string; link: string; roleLabel: st
     ),
   }
 }
+
+export function mentionEmail(opts: { from: string; issue: string; fileName: string; text: string; link: string }) {
+  return {
+    subject: `${opts.from} 在问题「${opts.issue}」里提到了你`,
+    text: `${opts.from} 在「${opts.fileName}」的问题「${opts.issue}」里提到了你：${opts.text}\n打开查看：${opts.link}`,
+    html: layout(
+      "有人提到了你",
+      `<p style="margin:0 0 12px">${esc(opts.from)} 在「${esc(opts.fileName)}」的问题 <strong>${esc(opts.issue)}</strong> 里提到了你：</p>
+<p style="margin:0 0 20px;padding:10px 14px;background:#f6f4f0;border-radius:8px">${esc(opts.text)}</p>
+<p style="margin:0 0 8px"><a href="${esc(opts.link)}" style="display:inline-block;background:#b0512e;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600">打开查看</a></p>`,
+    ),
+  }
+}

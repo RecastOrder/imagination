@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 
 import { getCurrentUser } from "@/lib/server/current-user"
-import { fileAccess } from "@/lib/server/file-access"
+import { checkMentions, fileAccess } from "@/lib/server/file-access"
+import { notifyMentions } from "@/lib/server/notifications"
 import { getIssue, replyIssue, setIssueStatus } from "@/lib/server/issues"
 
 async function load(ctx: RouteContext<"/api/issues/[id]">) {
@@ -18,8 +19,19 @@ export async function POST(req: Request, ctx: RouteContext<"/api/issues/[id]">) 
   const a = await load(ctx)
   if (a.error) return a.error
   const body = await req.json().catch(() => ({}))
+  const m = checkMentions(a.issue.fileId, body.mentions)
+  if (!m.ok) return NextResponse.json({ error: m.error }, { status: 400 })
   const r = replyIssue(a.issue.id, a.user.email, body.text)
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
+  await notifyMentions({
+    mentions: m.mentions,
+    from: a.user.email,
+    issueLabel: `#${r.issue.number}`,
+    fileName: r.issue.fileName,
+    text: String(body.text ?? "").trim(),
+    href: `/browse?f=${encodeURIComponent(r.issue.fileId)}&issue=${r.issue.id}`,
+    origin: process.env.APP_URL ?? new URL(req.url).origin,
+  })
   return NextResponse.json(r.issue)
 }
 
