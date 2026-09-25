@@ -29,12 +29,12 @@ export function getIssue(id: string) {
 
 const finite = (...n: unknown[]) => n.every((x) => typeof x === "number" && Number.isFinite(x))
 
-/** 只接受形状正确的标注（防止写进奇怪的数据） */
-function cleanMark(m: unknown): Mark | null {
+/** 只接受形状正确的标注（防止写进奇怪的数据）；keepId：保留原来的 id（个人标注），否则新生成 */
+export function cleanMark(m: unknown, keepId = false): Mark | null {
   const x = m as Mark
   if (!x || typeof x !== "object" || !finite(x.page) || x.page < 1) return null
   const text = typeof x.text === "string" ? x.text.slice(0, 2000) : ""
-  const id = newId("m")
+  const id = keepId && typeof x.id === "string" && x.id.length <= 40 ? x.id : newId("m")
   if (x.kind === "pin" && finite(x.x, x.y)) return { id, kind: "pin", page: x.page, x: x.x, y: x.y, text }
   if (x.kind === "rect" && finite(x.x, x.y, x.w, x.h)) return { id, kind: "rect", page: x.page, x: x.x, y: x.y, w: x.w, h: x.h, text }
   if (x.kind === "measure" && finite(x.x1, x.y1, x.x2, x.y2))

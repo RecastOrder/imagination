@@ -26,7 +26,7 @@ export interface FileAnnotations {
 
 export const EMPTY: FileAnnotations = { marks: [], scales: {} }
 
-/** 演示阶段存在浏览器本地；接后端后按“文件 + 用户 / 项目”存到服务器，项目成员可以共享 */
+/** 旧版存在浏览器里的标注：只用于第一次打开时搬到服务器（见 use-annotations.ts），不再写入 */
 export const annotationsStore = createLocalStore<Record<string, FileAnnotations>>("drive:annotations", {})
 
 export function scaleFor(a: FileAnnotations, page: number): number | undefined {

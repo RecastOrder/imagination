@@ -58,3 +58,12 @@
 - `src/app/api/issues/route.ts`、`src/app/api/issues/[id]/route.ts`
 - `src/components/drive/annotate/`：`use-issues.ts`、`issue-layer.tsx`、`issues-panel.tsx`、`marks-panel.tsx`（发起问题）、`annotator.tsx`（两个标签页、`?issue=` 定位）、`annotate-toolbar.tsx`
 - `src/components/projects/issues-tab.tsx`；`/design` 第 12 节
+
+## 补充：个人标注跟着账号走（负责人选了 A）
+
+- 个人标注改为存在服务器上，按“人 + 文件”保存：换电脑、换浏览器登录都还在；**仍然只有自己看得到**（接口只读写当前登录者自己的那一份）。
+- 以前存在浏览器里的标注，第一次打开文件时自动搬到服务器，不会丢。
+- 改动先显示、停手 0.6 秒后一次保存（像 Google Docs 的自动保存），失败会提示。
+
+![](img/v12-e1-other-computer.png)
+
