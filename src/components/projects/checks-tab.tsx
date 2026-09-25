@@ -39,6 +39,16 @@ export function ChecksTab({
   const counts = { pass: 0, fail: 0, missing: 0 }
   rows.forEach((r) => counts[r.status]++)
 
+  if (project.conditions.length === 0)
+    return (
+      <div className="rounded-xl border border-dashed px-6 py-14 text-center">
+        <p className="font-medium">还没有录入规划条件</p>
+        <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+          拿到规划条件通知书后，把容积率、绿地率、限高等限值录进来，这里就能逐条做数字比较（辅助核对，不代替审查）。
+        </p>
+      </div>
+    )
+
   return (
     <div className="space-y-5">
       <p className="flex gap-2 rounded-lg bg-surface-sunken px-4 py-3 text-sm">

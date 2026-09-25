@@ -1,6 +1,7 @@
 import {
   BookMarkedIcon,
   BoxesIcon,
+  FolderPlusIcon,
   LibraryIcon,
   MessageSquareIcon,
   SettingsIcon,
@@ -19,7 +20,7 @@ import type { SourceKind } from "@/lib/sources/types"
  * ⚠️ 界面上的隐藏只是体验，真正的权限判断必须在服务端再做一次。
  */
 
-export type Feature = "chat" | "library" | "notebook" | "upload" | "tool_gh" | "admin"
+export type Feature = "chat" | "library" | "notebook" | "upload" | "tool_gh" | "project_create" | "admin"
 
 export const FEATURES: Record<Feature, { label: string; desc: string; icon: LucideIcon }> = {
   chat: { label: "AI 对话", desc: "在对话中提问、生成回答", icon: MessageSquareIcon },
@@ -27,9 +28,11 @@ export const FEATURES: Record<Feature, { label: string; desc: string; icon: Luci
   notebook: { label: "笔记本", desc: "摘录、批注、按项目整理", icon: BookMarkedIcon },
   upload: { label: "上传与云盘", desc: "上传文件、从网盘导入", icon: UploadCloudIcon },
   tool_gh: { label: "GH 生成器", desc: "生成 Grasshopper 文件", icon: BoxesIcon },
+  /** 已定：管理员 + 管理员指定的人可以新建项目（在“成员与权限”里单独打开） */
+  project_create: { label: "新建项目", desc: "发起新项目，并指定项目负责人", icon: FolderPlusIcon },
   admin: { label: "成员管理", desc: "管理成员、角色和配额", icon: SettingsIcon },
 }
-export const FEATURE_ORDER: Feature[] = ["chat", "library", "notebook", "upload", "tool_gh", "admin"]
+export const FEATURE_ORDER: Feature[] = ["chat", "library", "notebook", "upload", "tool_gh", "project_create", "admin"]
 
 export type Collection = "standards" | "atlas" | "journals" | "cases"
 
@@ -123,7 +126,7 @@ export interface Member {
 
 export const MEMBERS: Member[] = [
   { id: "u1", email: "zhang.ming@studio.cn", name: "张明", dept: "设计一所", role: "admin", status: "active", featureOverrides: {}, usage: { storageGB: 36.2, aiThisMonth: 812 } },
-  { id: "u2", email: "li.na@studio.cn", name: "李娜", dept: "设计一所", role: "standard", status: "active", featureOverrides: {}, usage: { storageGB: 21.5, aiThisMonth: 640 } },
+  { id: "u2", email: "li.na@studio.cn", name: "李娜", dept: "设计一所", role: "standard", status: "active", featureOverrides: { project_create: true }, usage: { storageGB: 21.5, aiThisMonth: 640 } },
   { id: "u3", email: "wang.lei@studio.cn", name: "王磊", dept: "设计二所", role: "standard", status: "active", featureOverrides: { upload: false }, usage: { storageGB: 3.1, aiThisMonth: 1320 } },
   { id: "u4", email: "chen.jing@studio.cn", name: "陈静", dept: "技术质量部", role: "reader", status: "active", featureOverrides: { chat: true }, collections: ["standards", "atlas", "journals"], usage: { storageGB: 0.4, aiThisMonth: 96 } },
   { id: "u5", email: "liu.yang@studio.cn", name: "刘洋", dept: "参数化小组", role: "tool_user", status: "active", featureOverrides: {}, usage: { storageGB: 4.6, aiThisMonth: 180 } },

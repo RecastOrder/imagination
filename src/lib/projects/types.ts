@@ -70,6 +70,8 @@ export interface Project {
   conditions: Condition[]
   /** 本项目当前的设计指标（key 对应 conditions.key） */
   metrics: Record<string, number | undefined>
+  createdBy?: string
+  createdAt?: number
 }
 
 export const STAGES = ["方案", "初设", "施工图", "施工配合"]

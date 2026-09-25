@@ -3,24 +3,35 @@ import Link from "next/link"
 import { MapPinIcon, UsersIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
+import { NewProject } from "@/components/projects/new-project"
 import { getCurrentUser } from "@/lib/server/current-user"
+import { isAdmin, listMembers } from "@/lib/server/members"
 import { MEMBER_ROLES } from "@/lib/projects/types"
 import { roleIn, listProjectsFor } from "@/lib/server/projects"
 
 export const metadata: Metadata = { title: "项目" }
 
-/** 我参与的项目（管理员看全部）。新建项目将由管理员 / 项目负责人发起（后续） */
+/** 我参与的项目（管理员看全部）。管理员和被指定的人可以新建项目（已定） */
 export default async function ProjectsPage() {
   const user = await getCurrentUser()
   const projects = user ? listProjectsFor(user.email) : []
+  const canCreate = !!user?.permissions.features.project_create.on
+  const directory = listMembers()
+    .filter((m) => m.status !== "disabled")
+    .map((m) => ({ email: m.email, name: m.name }))
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
-        <h1 className="text-2xl font-semibold tracking-tight">项目</h1>
-        <p className="mt-1 text-sm text-muted-foreground">以项目为单位：位置与适用要求、依据清单、指标核对、成员和分析工具。</p>
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight">项目</h1>
+            <p className="mt-1 text-sm text-muted-foreground">以项目为单位：位置与适用要求、依据清单、指标核对、成员和分析工具。</p>
+          </div>
+          {user && canCreate && <NewProject me={user.email} isAdmin={isAdmin(user.email)} directory={directory} />}
+        </div>
         {projects.length === 0 ? (
           <p className="mt-8 rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-            你还没有加入任何项目。请联系项目负责人把你拉进项目。
+            {canCreate ? "还没有项目。点右上角“新建项目”开始。" : "你还没有加入任何项目。请联系项目负责人把你拉进项目。"}
           </p>
         ) : (
           <ul className="mt-8 grid gap-3 sm:grid-cols-2">

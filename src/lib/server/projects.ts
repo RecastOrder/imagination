@@ -1,5 +1,6 @@
 import { PROJECT_SEED } from "@/lib/projects/seed"
-import { MEMBER_ROLES, type MemberRole, type Project, type ProjectAccess, type ProjectLocation, type ProjectMember } from "@/lib/projects/types"
+import { LOCATIONS } from "@/lib/projects/regional"
+import { MEMBER_ROLES, STAGES, TYPES, type MemberRole, type Project, type ProjectAccess, type ProjectLocation, type ProjectMember } from "@/lib/projects/types"
 import { collection } from "./db"
 import { findMember, isAdmin } from "./members"
 
@@ -52,6 +53,53 @@ export function accessOf(p: Project, email: string): ProjectAccess {
 export function patchNeeds(patch: ProjectPatch): "edit" | "manage" {
   const keys = Object.keys(patch).filter((k) => patch[k as keyof ProjectPatch] !== undefined)
   return keys.every((k) => k === "metrics") ? "edit" : "manage"
+}
+
+export interface NewProjectInput {
+  name: string
+  type: string
+  stage: string
+  location: ProjectLocation
+  /** 项目负责人（默认发起人自己） */
+  lead?: string
+}
+
+/**
+ * 新建项目：调用方先确认发起人有“新建项目”权限。
+ * 负责人默认是发起人；指定别人当负责人时，发起人（非管理员）自动作为“可编辑”成员加入。
+ */
+export function createProject(input: NewProjectInput, creator: string): { ok: true; project: Project } | { ok: false; error: string } {
+  const name = String(input.name ?? "").trim().slice(0, 60)
+  if (!name) return { ok: false, error: "请填写项目名称" }
+  if (!TYPES.includes(input.type)) return { ok: false, error: "项目类型不正确" }
+  if (!STAGES.includes(input.stage)) return { ok: false, error: "项目阶段不正确" }
+  const loc = input.location ?? ({} as ProjectLocation)
+  if (!LOCATIONS[loc.province]?.[loc.city]?.includes(loc.district)) return { ok: false, error: "请选择项目所在的区" }
+  const lead = input.lead || creator
+  const leadMember = findMember(lead)
+  if (!leadMember || leadMember.status === "disabled") return { ok: false, error: "负责人不在单位成员名单里，或账号已停用" }
+  if ([...store.values()].some((p) => p.name === name)) return { ok: false, error: "已经有同名项目了，换个名称以便区分" }
+  const members: ProjectMember[] = [{ email: lead, role: "lead" }]
+  if (lead !== creator && !isAdmin(creator)) members.push({ email: creator, role: "editor" })
+  const project: Project = {
+    id: `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+    name,
+    type: input.type,
+    stage: input.stage,
+    location: {
+      province: loc.province,
+      city: loc.city,
+      district: loc.district,
+      address: String(loc.address ?? "").trim().slice(0, 120),
+    },
+    members,
+    conditions: [],
+    metrics: {},
+    createdBy: creator,
+    createdAt: Date.now(),
+  }
+  store.set(project.id, project)
+  return { ok: true, project }
 }
 
 export type ProjectPatch = Partial<Pick<Project, "name" | "type" | "stage" | "metrics">> & {
