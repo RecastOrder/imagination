@@ -1,4 +1,5 @@
 import { MEMBERS, ROLES, resolve, type Member, type RoleId } from "@/lib/auth/permissions"
+import { currentRoster, rosterEnabled, rosterRole } from "./cairn-roster"
 import { collection } from "./db"
 import { DEMO_DATA } from "./env"
 
@@ -46,22 +47,71 @@ export function isPersonalMail(email: string) {
   return PERSONAL_MAIL_DOMAINS.includes(email.split("@")[1] ?? "")
 }
 
+/**
+ * 名单由 Cairn 管理时（ROSTER_SOURCE=cairn）：在 Cairn 名单上 ⇒ 是成员（第一次用到时在本库建一条，
+ * 只存本平台自己的设置）；Cairn owner ⇒ 管理员，其余 ⇒ 不是管理员；不在名单上 ⇒ 不是成员（即使本库有旧记录）。
+ * 名单从来没拿到过 ⇒ 只认 INITIAL_ADMIN_EMAIL，免得 Cairn 一时连不上就谁都进不来、又不至于放所有人进来
+ * （这也意味着：第一次启动就连不上 Cairn 时，其他人的会话会被结束 —— 有意 fail closed）。
+ */
+function rosterMember(email: string): Member | undefined {
+  const e = email.trim().toLowerCase()
+  const role = rosterRole(e)
+  if (role === undefined) return e === process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase() ? members().get(e) : undefined
+  if (role === null) return undefined
+  let m = members().get(e)
+  if (!m) {
+    m = {
+      id: `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      email: e,
+      name: e.split("@")[0],
+      dept: "",
+      role: role === "owner" ? "admin" : "standard",
+      status: "invited",
+      featureOverrides: {},
+      usage: { storageGB: 0, aiThisMonth: 0 },
+      invitedAt: Date.now(),
+      invitedBy: "Cairn 名单",
+    }
+    members().set(e, m)
+  } else if ((role === "owner") !== (m.role === "admin") || "admin" in (m.featureOverrides ?? {})) {
+    // 管理员身份跟着 Cairn 的 owner 走，两个方向都跟；本平台对“管理”这一项的单独调整
+    // 会绕过这条规则（owner 被关掉管理 / 非 owner 被打开管理），所以一并去掉
+    const { admin: _drop, ...rest } = (m.featureOverrides ?? {}) as Record<string, boolean>
+    void _drop
+    m = { ...m, role: role === "owner" ? "admin" : "standard", featureOverrides: rest }
+    members().set(e, m)
+  }
+  return m
+}
+
 export function findMember(email: string): Member | undefined {
-  return members().get(email)
+  return rosterEnabled() ? rosterMember(email) : members().get(email)
 }
 
 export function listMembers(): Member[] {
-  return [...members().values()].sort((a, b) => (a.invitedAt ?? 0) - (b.invitedAt ?? 0))
+  const r = rosterEnabled() ? currentRoster() : undefined
+  const emails = r
+    ? [...r.owners, ...r.members]
+    : rosterEnabled()
+      ? [...members().values()].map((m) => m.email) // 名单还没拿到过：rosterMember 只会放行 INITIAL_ADMIN_EMAIL
+      : null
+  const all = emails
+    ? [...new Set(emails)].map((e) => rosterMember(e)).filter((m): m is Member => !!m)
+    : [...members().values()]
+  return all.sort((a, b) => (a.invitedAt ?? 0) - (b.invitedAt ?? 0))
 }
 
 export function isAdmin(email: string) {
-  const m = members().get(email)
+  const m = findMember(email)
   return !!m && m.status !== "disabled" && resolve(m).features.admin.on
 }
 
 export type InviteResult = { ok: true; member: Member } | { ok: false; error: string }
 
 export function inviteMember(input: { email: string; name?: string; role: RoleId; invitedBy: string }): InviteResult {
+  if (rosterEnabled()) {
+    return { ok: false, error: "成员名单由 Cairn 管理：请在 Cairn 的名单里加人，这里一分钟内会同步过来" }
+  }
   if (isPersonalMail(input.email)) return { ok: false, error: "这是个人邮箱。平台只接受工作单位邮箱，请换成对方的单位邮箱" }
   if (members().has(input.email)) return { ok: false, error: "这个邮箱已经在成员名单里" }
   if (!ROLES[input.role]) return { ok: false, error: "角色不存在" }

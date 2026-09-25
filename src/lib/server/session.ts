@@ -94,7 +94,9 @@ export async function checkSession(token: string | undefined): Promise<SessionCh
   const s = store.get(sid)
   if (!s) return { ok: false, reason: "invalid" }
   if (s.endedAt) return { ok: false, reason: s.endReason ?? "revoked" }
-  if (findMember(s.email)?.status === "disabled") {
+  // 被停用，或已不在名单上（名单由 Cairn 管理时，从 Cairn 移除的人下一次刷新后就进不来）
+  const m = findMember(s.email)
+  if (!m || m.status === "disabled") {
     store.set(sid, { ...s, endedAt: Date.now(), endReason: "disabled" })
     return { ok: false, reason: "disabled" }
   }
