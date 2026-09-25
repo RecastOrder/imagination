@@ -21,7 +21,7 @@ export function AdminViewLog({
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           管理员有全部权限，可以打开任何成员的“我的”文件。每次以管理员身份打开时记一笔，只有管理员能看到这里。
-          文件本来就开放给自己的，按普通权限打开，不记录。
+          文件本来就开放给自己的，按普通权限打开，不记录。记录永久保留，不能删除。
         </p>
         {entries.length === 0 ? (
           <p className="mt-8 rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">还没有记录</p>
