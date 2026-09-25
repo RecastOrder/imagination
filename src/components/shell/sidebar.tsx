@@ -14,6 +14,7 @@ import {
   PaletteIcon,
   UsersIcon,
   PanelLeftIcon,
+  ScrollTextIcon,
   SearchIcon,
   SquarePenIcon,
   type LucideIcon,
@@ -49,6 +50,7 @@ const NAV: { href: string; label: string; icon: LucideIcon; feature: Feature }[]
 /** 管理类入口：只有有对应权限的人才会看到（演示中默认当前用户是管理员） */
 const ADMIN_NAV: { href: string; label: string; icon: LucideIcon; adminOnly?: boolean }[] = [
   { href: "/admin/members", label: "成员与权限", icon: UsersIcon, adminOnly: true },
+  { href: "/admin/audit", label: "查看记录", icon: ScrollTextIcon, adminOnly: true },
   { href: "/design", label: "设计系统", icon: PaletteIcon },
 ]
 

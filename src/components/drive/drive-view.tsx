@@ -13,6 +13,7 @@ import {
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   PencilIcon,
+  ShieldCheckIcon,
   UsersIcon,
 } from "lucide-react"
 
@@ -221,6 +222,24 @@ export function DriveView({
     selected.id !== `me/${selectedOwner}` &&
     !selected.id.includes("!")
 
+  // 管理员打开别人的个人文件（不是通过别人开放给自己）：服务器记一笔查看记录，只有管理员能看
+  const adminViewing =
+    isAdmin &&
+    !!selected &&
+    selected.type !== "folder" &&
+    !!selectedOwner &&
+    selectedOwner !== email &&
+    !sharedWithMe.some((x) => covers(x.share, selected.id))
+  useEffect(() => {
+    if (!adminViewing || !selectedId) return
+    fetch("/api/audit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ itemId: selectedId }),
+    }).catch(() => {})
+  }, [adminViewing, selectedId])
+  const ownerName = selectedOwner ? (directory.find((d) => d.email === selectedOwner)?.name ?? selectedOwner.split("@")[0]) : ""
+
   // 目录树右侧的小标记：我共享出去的显示人数；共享给我的显示主人和档位
   const sharedCount = (id: string) => new Set(myShares.filter((s) => s.itemId === id).map((s) => s.grantee)).size
   const treeBadge = (n: DriveNode) => {
@@ -339,6 +358,12 @@ export function DriveView({
           </Button>
         )}
       </header>
+      {adminViewing && (
+        <p role="note" className="flex shrink-0 items-center gap-1.5 border-b bg-surface-sunken px-4 py-1.5 text-xs text-muted-foreground">
+          <ShieldCheckIcon className="size-3.5 shrink-0" />
+          你正以管理员身份查看{ownerName}的个人文件，这次查看会记录在“查看记录”里（只有管理员能看到）。
+        </p>
+      )}
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-1 overflow-hidden">
           {!selected ? (

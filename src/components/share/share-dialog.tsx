@@ -169,7 +169,7 @@ export function ShareDialog({
           {/* 如实告知：管理员有全部权限，能看到所有人的文件 */}
           <li className="flex items-center gap-3 px-3 py-2 text-muted-foreground">
             <span className="min-w-0 flex-1 truncate text-sm">管理员</span>
-            <span className="px-2 text-sm">全部权限</span>
+            <span className="px-2 text-sm">全部权限 · 查看留记录</span>
           </li>
         </ul>
 

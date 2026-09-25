@@ -84,3 +84,16 @@
 - `src/components/projects/members-tab.tsx`、`project-view.tsx`、`refs-tab.tsx`、`add-to-project.tsx`
 - `src/components/drive/drive-view.tsx`、`file-tree.tsx`、`viewer-host.tsx`、`annotate/annotator.tsx`（`readOnly`）
 - `/design` 样张页第 11 节
+
+## 第三轮：查看记录（负责人选了 B）
+
+管理员以管理员身份打开别人的个人文件时，服务器记一笔：时间、管理员、文件主人、文件。**只有管理员能看到**（侧栏「管理 · 查看记录」）。
+
+- 同一位管理员 10 分钟内重复打开同一个文件只记一次，避免刷屏。
+- 文件本来就开放给管理员的，属于普通权限，不记录。
+- 打开时顶部有一行说明“这次查看会被记录”，让管理员自己也清楚（**透明**：Nielsen 原则 1“系统状态可见”）。
+- 局限：演示版的记录由浏览器打开文件时上报；上线后应在服务器发下载地址的那一步记录，才无法绕过。
+
+| 管理员打开别人的文件 | 查看记录（仅管理员） |
+|---|---|
+| ![](img/v08-h1-admin-notice.png) | ![](img/v08-h2-audit-page.png) |
