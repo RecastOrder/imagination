@@ -108,9 +108,12 @@ export function isRealAdmin(email: string) {
   return !!m && m.status !== "disabled" && resolve(m).features.admin.on
 }
 
-/** 管理员对比视角：打开时按普通成员看待（role 换成 standard、去掉单独调整） */
+/**
+ * 管理员对比视角：打开时按一个“刚被邀请的普通成员”看待 —— resolve() 读的四样全部换成普通成员的默认值
+ * （角色、单独调整、可见资料范围、用量额度），否则会带着管理员自己的范围去看，对比就不准。
+ */
 export function asViewedMember(m: Member): Member {
-  return { ...m, role: "standard", featureOverrides: {} }
+  return { ...m, role: "standard", featureOverrides: {}, collections: undefined, quota: undefined }
 }
 
 export function viewingAsMember(email: string) {
