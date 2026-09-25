@@ -33,6 +33,8 @@ export async function notifyMentions(opts: {
   text: string
   href: string
   origin: string
+  /** 是 @全体成员 发出的 */
+  everyone?: boolean
 }) {
   const fromName = findMember(opts.from)?.name ?? opts.from.split("@")[0]
   for (const to of new Set(opts.mentions)) {
@@ -43,7 +45,7 @@ export async function notifyMentions(opts: {
       kind: "mention",
       from: opts.from,
       fromName,
-      title: `${fromName} 在问题 ${opts.issueLabel} 里提到了你`,
+      title: opts.everyone ? `${fromName} 在问题 ${opts.issueLabel} 里提醒了项目全体成员` : `${fromName} 在问题 ${opts.issueLabel} 里提到了你`,
       text: opts.text.slice(0, 200),
       href: opts.href,
       at: Date.now(),

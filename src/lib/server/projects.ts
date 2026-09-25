@@ -56,7 +56,7 @@ export function accessOf(p: Project, email: string): ProjectAccess {
 /** 这次修改需要哪一级权限：只改指标 / 规划条件 → 编辑；其他（位置、阶段、成员、归档…）→ 管理 */
 export function patchNeeds(patch: ProjectPatch): "edit" | "manage" {
   const keys = Object.keys(patch).filter((k) => patch[k as keyof ProjectPatch] !== undefined)
-  return keys.every((k) => k === "metrics" || k === "conditions") ? "edit" : "manage"
+  return keys.every((k) => k === "metrics" || k === "conditions" || k === "conditionsNote") ? "edit" : "manage"
 }
 
 /** 规划条件：逐条检查格式，key 不能重复 */
@@ -133,6 +133,8 @@ export function createProject(input: NewProjectInput, creator: string): { ok: tr
 export type ProjectPatch = Partial<Pick<Project, "name" | "type" | "stage" | "metrics" | "conditions">> & {
   /** true = 归档，false = 恢复（只有负责人 / 管理员） */
   archived?: boolean
+  /** 保存规划条件时，这一轮的依据（写进历史） */
+  conditionsNote?: string
   location?: Partial<ProjectLocation>
   members?: ProjectMember[]
 }

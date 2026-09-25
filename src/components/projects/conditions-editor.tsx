@@ -67,7 +67,8 @@ export function ConditionsEditor({
   conditions: Condition[]
   /** 打开时先展开“从 PDF 识别” */
   startWithPdf?: boolean
-  onSave: (conditions: Condition[]) => Promise<boolean>
+  /** note：这一轮的依据（写进历史） */
+  onSave: (conditions: Condition[], note?: string) => Promise<boolean>
 }) {
   const toRows = (cs: Condition[]): Row[] => cs.map((c) => ({ ...c, value: String(c.value) }))
   const [rows, setRows] = useState<Row[]>(() => toRows(conditions))
@@ -76,6 +77,7 @@ export function ConditionsEditor({
   const [found, setFound] = useState<{ file: string; list: ConditionCandidate[]; picked: Set<number> } | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState("")
   const fileInput = useRef<HTMLInputElement>(null)
   const pdfs = projectPdfs(projectId)
 
@@ -115,6 +117,8 @@ export function ConditionsEditor({
       }
       return next
     })
+    // 依据默认填识别用的文件名，可以改
+    if (!note.trim()) setNote(found.file.replace(/\.pdf$/i, ""))
     setFound(null)
     setPdfOpen(false)
   }
@@ -122,7 +126,10 @@ export function ConditionsEditor({
   const invalid = rows.some((r) => !r.label.trim() || r.value.trim() === "" || !Number.isFinite(Number(r.value)))
   const save = async () => {
     setSaving(true)
-    const ok = await onSave(rows.map((r) => ({ ...r, value: Number(r.value) })))
+    const ok = await onSave(
+      rows.map((r) => ({ ...r, value: Number(r.value) })),
+      note.trim() || undefined,
+    )
     setSaving(false)
     if (ok) onOpenChange(false)
   }
@@ -280,7 +287,17 @@ export function ConditionsEditor({
           </Button>
         </div>
 
-        <div className="mt-5 flex items-center justify-end gap-2">
+        <label className="mt-5 block">
+          <span className="text-xs text-muted-foreground">这一轮的依据（可选，会写进历史）</span>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="如：规划条件调整函（2026-10）"
+            className="mt-1 h-9 w-full rounded-md border border-input bg-surface px-2 text-sm outline-none focus:border-ring"
+          />
+        </label>
+        <p className="mt-1 text-xs text-muted-foreground">每次保存算一轮，之前的每一轮都会保留，可以在“历史”里对比。</p>
+        <div className="mt-4 flex items-center justify-end gap-2">
           {invalid && <p className="mr-auto text-xs text-destructive">每条都要有名称和数字限值</p>}
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             取消

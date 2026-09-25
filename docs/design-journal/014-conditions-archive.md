@@ -62,3 +62,15 @@
 - `src/lib/server/projects.ts`：`conditions` 校验、`archived`、归档后只读；`api/projects/[id]`、`refs` 接口的归档检查
 - `src/components/projects/project-view.tsx`（归档按钮、横幅）、`src/app/(app)/projects/page.tsx`（已归档折叠区）
 - 示例文件：`public/samples/drive/planning-conditions.pdf`
+
+## 补充：每一轮都保留（负责人决定：确认好算一轮，每一轮的历史都要保留）
+
+- 每次“保存规划条件”算一轮：记下第几轮、谁、什么时候、**依据**（如“规划条件调整函”，从 PDF 识别时自动填文件名）。
+- “指标核对”上方显示当前是第几轮；点“历史”看所有轮次，每一轮列出和上一轮相比**新增 / 删除 / 修改**了什么（如“建筑高度 ≤60m → ≤80m”），可以展开看那一轮的全部条件。
+- 轮次只增不改、永久保留（和文件“历史版本永久保留”一致）。
+- 识别规则：等有具体的通知书资料后再补（负责人已定）。
+
+| 保存时写依据 | 当前轮次 | 历史：每一轮改了什么 |
+|---|---|---|
+| ![](img/v14-g1-editor-note.png) | ![](img/v14-g2-checks-round3.png) | ![](img/v14-g3-history.png) |
+

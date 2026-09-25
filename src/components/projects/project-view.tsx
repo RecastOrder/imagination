@@ -14,6 +14,7 @@ import type { ProjectRef } from "@/lib/projects/refs"
 import { MEMBER_ROLES, type Project, type ProjectAccess } from "@/lib/projects/types"
 import { cn } from "@/lib/utils"
 import type { Issue } from "@/lib/drive/issues"
+import type { ConditionRound } from "@/lib/projects/condition-rounds"
 import { ChecksTab } from "./checks-tab"
 import { IssuesTab } from "./issues-tab"
 import { MembersTab } from "./members-tab"
@@ -31,6 +32,7 @@ export function ProjectView({
   initial,
   initialRefs,
   issues,
+  rounds,
   access,
   directory,
 }: {
@@ -39,6 +41,8 @@ export function ProjectView({
   initialRefs: ProjectRef[]
   /** 项目文件上发起的问题 */
   issues: Issue[]
+  /** 规划条件的历史轮次 */
+  rounds: ConditionRound[]
   access: ProjectAccess
   directory: { email: string; name: string }[]
 }) {
@@ -172,7 +176,7 @@ export function ProjectView({
           {tab === "overview" && <OverviewTab project={project} refs={refs} canEdit={manage} onSave={save} />}
           {tab === "refs" && <RefsTab projectId={project.id} refs={refs} onRefsChange={setRefs} canEdit={edit} />}
           {tab === "issues" && <IssuesTab issues={issues} />}
-          {tab === "checks" && <ChecksTab key={JSON.stringify([project.metrics, project.conditions])} project={project} canEdit={edit} onSave={save} />}
+          {tab === "checks" && <ChecksTab key={JSON.stringify([project.metrics, project.conditions])} project={project} rounds={rounds} canEdit={edit} onSave={save} />}
           {tab === "members" && <MembersTab project={project} access={{ ...access, canManage: manage }} directory={directory} onSave={save} />}
           {tab === "tools" && <ToolsTab project={project} />}
         </div>

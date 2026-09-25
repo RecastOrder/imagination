@@ -36,12 +36,13 @@ export async function POST(req: Request) {
   const scope = issueScope(fileId)
   if (!access || !scope) return NextResponse.json({ error: "无权查看这个文件" }, { status: 404 })
   if (access !== "edit") return NextResponse.json({ error: "你对这个文件是“仅浏览”，不能发起问题，可以在已有问题下回复" }, { status: 403 })
-  const m = checkMentions(fileId, body.mentions)
+  const m = checkMentions(fileId, body.mentions, user.email)
   if (!m.ok) return NextResponse.json({ error: m.error }, { status: 400 })
   const r = raiseIssue({ scope, fileId, fileName: body.fileName, mark: body.mark, scale: body.scale, title: body.title, author: user.email })
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
   await notifyMentions({
     mentions: m.mentions,
+    everyone: m.everyone,
     from: user.email,
     issueLabel: `#${r.issue.number}`,
     fileName: r.issue.fileName,

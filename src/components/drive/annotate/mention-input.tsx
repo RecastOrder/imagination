@@ -33,7 +33,7 @@ export function MentionText({ text }: { text: string }) {
 }
 
 /**
- * 可以 @ 人的输入框（像微信 / 飞书 / GitHub）：打“@”弹出能看这个文件的人，
+ * 可以 @ 人的输入框（项目负责人在项目文件里还会看到“全体成员”）（像微信 / 飞书 / GitHub）：打“@”弹出能看这个文件的人，
  * ↑↓ 选择、Enter 或 Tab 确认、Esc 关闭。只有被 @ 的人会收到通知（已定）。
  */
 export function MentionInput({
@@ -132,8 +132,8 @@ export function MentionInput({
               onMouseEnter={() => setActive(i)}
               className={cn("flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-sm", i === active && "bg-accent")}
             >
-              <span className="font-medium">{p.name}</span>
-              <span className="truncate text-xs text-muted-foreground">{p.email}</span>
+              <span className="shrink-0 font-medium whitespace-nowrap">{p.name}</span>
+              <span className="truncate text-xs text-muted-foreground">{p.email === "@all" ? "提醒项目里的所有成员（负责人可用）" : p.email}</span>
             </li>
           ))}
         </ul>

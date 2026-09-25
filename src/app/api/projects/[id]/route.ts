@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { addRound } from "@/lib/server/condition-rounds"
 import { getCurrentUser } from "@/lib/server/current-user"
 import { canEditContent, canManage, canView, getProject, patchNeeds, updateProject, type ProjectPatch } from "@/lib/server/projects"
 
@@ -31,5 +32,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]"
     )
   const r = updateProject(p.id, patch, user.email)
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
+  // 规划条件每确认保存一次算一轮，永久保留
+  if (patch.conditions) addRound(r.project, r.project.conditions, user.email, patch.conditionsNote)
   return NextResponse.json(r.project)
 }

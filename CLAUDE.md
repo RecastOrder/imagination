@@ -25,7 +25,7 @@
 - 文件浏览：新增可预览格式 = 在 `src/lib/drive/formats.ts` 登记 + 在 `src/components/drive/viewer-host.tsx` 注册查看器；大体积库（PDF.js、three.js）用 `next/dynamic` 按需加载。PDF.js 必须用 `pdfjs-dist/legacy/build/pdf.mjs`（兼容旧浏览器）。浏览器端资源由 `scripts/copy-vendor.mjs` 复制到 `public/vendor`（不提交）。
 - 文件浏览分三个空间（`src/lib/drive/sample-tree.ts`）：公共 / 项目 / 我的；能看到哪些项目由服务端 `projectsFor()` 决定。
 - Office 预览：浏览器把文件内容 POST 到 `/api/preview/office`，服务器用 LibreOffice 转 PDF（`src/lib/server/office-convert.ts`，按内容哈希缓存在 `.cache/`），前端复用 PDF 查看器。
-- 标注与测量：`useAnnotator()`（`src/components/drive/annotate/annotator.tsx`）可装到任意分页查看器上；坐标用页面单位（PDF 点 / 图片像素），比例 = 每单位毫米数。批注和测量用 `--markup` 颜色，不要用强调色。个人标注存服务器、跟着账号走（`src/lib/server/annotations.ts`，按“人 + 文件”），只有自己看得到；要给别人看 = 发起“问题”（`src/lib/server/issues.ts`，按文件权限 `fileAccess()`：能看就能回复，能编辑才能发起 / 关闭），问题用虚线 + “#编号”与个人标注区分。通知（已定）：**只通知被 @ 的人**（`src/lib/server/notifications.ts`：站内铃铛 + Resend 邮件），只能 @ 能看这个文件的人（`checkMentions()`）。
+- 标注与测量：`useAnnotator()`（`src/components/drive/annotate/annotator.tsx`）可装到任意分页查看器上；坐标用页面单位（PDF 点 / 图片像素），比例 = 每单位毫米数。批注和测量用 `--markup` 颜色，不要用强调色。个人标注存服务器、跟着账号走（`src/lib/server/annotations.ts`，按“人 + 文件”），只有自己看得到；要给别人看 = 发起“问题”（`src/lib/server/issues.ts`，按文件权限 `fileAccess()`：能看就能回复，能编辑才能发起 / 关闭），问题用虚线 + “#编号”与个人标注区分。通知（已定）：**只通知被 @ 的人**（`src/lib/server/notifications.ts`：站内铃铛 + Resend 邮件），只能 @ 能看这个文件的人（`checkMentions()`）；项目负责人 / 管理员可以 @全体成员。
 - 邮件：`src/lib/server/email.ts`（Resend）；邮件 HTML 只能用内联样式和具体色值（邮件客户端不支持 CSS 变量），这是“禁止原始色值”的唯一例外。
 - 同一个查看器不要在桌面 / 手机两套布局里各渲染一份（会重复加载、重复绑定快捷键）；只在浏览器端渲染的页面可以用 `useMinWidth` 选布局。
 - 文件：同名不同内容自动递增版本（`resolveVersion`，`src/lib/files/store.ts`），同名同内容不重复保存；历史版本永久保留。
@@ -34,7 +34,7 @@
 
 - 平台是**辅助工具**：不做规范审查、不当审核方。界面措辞要体现“供参考，结论由本人确认”；机械核对（数字比较）可以做，但必须写明不代替审查。
 - 规范被替代时必须标出，并列出变更内容和影响范围（`src/lib/projects/changes.ts`）。
-- 项目：位置细到区，按位置自动匹配三级要求（`src/lib/projects/regional.ts`）；权限判断在 `src/lib/server/projects.ts`。新建项目 = 功能权限 `project_create`（管理员自带，其他人由管理员单独打开），负责人默认发起人。项目**不能删除，只能归档**（`archivedAt`，只读保留、可恢复；归档后 `canEditContent` 为假）。规划条件：手动录入 + PDF 识别（`src/lib/projects/extract-conditions.ts`，只产出带原文片段的候选，必须本人确认后才保存）。
+- 项目：位置细到区，按位置自动匹配三级要求（`src/lib/projects/regional.ts`）；权限判断在 `src/lib/server/projects.ts`。新建项目 = 功能权限 `project_create`（管理员自带，其他人由管理员单独打开），负责人默认发起人。项目**不能删除，只能归档**（`archivedAt`，只读保留、可恢复；归档后 `canEditContent` 为假）。规划条件：手动录入 + PDF 识别（`src/lib/projects/extract-conditions.ts`，只产出带原文片段的候选，必须本人确认后才保存）；每次确认保存算一轮，**每一轮永久保留**（`src/lib/server/condition-rounds.ts`，可对比每轮的变化）。
 - 权限（已定）：管理员全部权限；项目角色三档 负责人 / 可编辑 / 仅浏览（`MemberRole`）——“编辑内容”（`canEditContent`）与“管理项目和成员权限”（`canManage`）分开校验。个人文件用同一套档位（`src/lib/access.ts`：view / edit）开放给同事——**只在平台内部**，不复制、不发送、没有外部链接（`src/lib/server/shares.ts`），主人或管理员可以设置，开放文件夹覆盖其中所有文件。管理员能看全部成员的“我的”文件（含已停用的人），以管理员身份打开时记入查看记录（`src/lib/server/audit.ts`，`/admin/audit`，只有管理员能看，永久保留、不能删除）。离职 = 管理员停用账号，所有访问自动失效。仅浏览时查看器传 `readOnly`：可以测量、校准，不能标记、框选。界面用“权限 / 谁可以访问”，不要用“分享链接”之类会让人以为文件被发出去的说法。权限下拉统一用 `src/components/share/access-menu.tsx`。
 
 ## 学习陪伴模式（用户希望边做边学）

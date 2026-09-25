@@ -1,7 +1,7 @@
 import type { AccessLevel } from "@/lib/access"
 import { ownerOf } from "@/lib/drive/sample-tree"
 import { findMember, listMembers } from "./members"
-import { canEditContent, canView, getProject } from "./projects"
+import { canEditContent, canManage, canView, getProject } from "./projects"
 import { personalAccess } from "./shares"
 
 /**
@@ -29,19 +29,41 @@ export function issueScope(fileId: string): string | null {
   return owner ? `me:${owner}` : null
 }
 
-/** 可以 @ 的人：能看这个文件、账号正常的单位成员（不含自己） */
+/** “@全体成员”：项目文件里，负责人 / 管理员可以一次提醒项目所有成员（已定） */
+export const MENTION_ALL = "@all"
+export const MENTION_ALL_NAME = "全体成员"
+
+function projectOf(fileId: string) {
+  return fileId.startsWith("proj/") ? getProject(fileId.split("/")[1]) : undefined
+}
+
+/** 可以 @ 的人：能看这个文件、账号正常的单位成员（不含自己）；负责人在项目文件里还能 @全体成员 */
 export function mentionable(fileId: string, me: string) {
-  return listMembers()
+  const people = listMembers()
     .filter((m) => m.status === "active" && m.email !== me && fileAccess(m.email, fileId))
     .map((m) => ({ email: m.email, name: m.name }))
+  const p = projectOf(fileId)
+  return p && canManage(p, me) ? [{ email: MENTION_ALL, name: MENTION_ALL_NAME }, ...people] : people
 }
 
 /** 检查 @ 的人：都得能看这个文件，否则提示先给对方权限 */
-export function checkMentions(fileId: string, raw: unknown): { ok: true; mentions: string[] } | { ok: false; error: string } {
-  if (raw === undefined) return { ok: true, mentions: [] }
+export function checkMentions(
+  fileId: string,
+  raw: unknown,
+  actor: string,
+): { ok: true; mentions: string[]; everyone: boolean } | { ok: false; error: string } {
+  if (raw === undefined) return { ok: true, mentions: [], everyone: false }
   if (!Array.isArray(raw) || raw.length > 20) return { ok: false, error: "提到的人太多了" }
-  const mentions = [...new Set(raw.map(String))]
+  let mentions = [...new Set(raw.map(String))]
+  const everyone = mentions.includes(MENTION_ALL)
+  if (everyone) {
+    const p = projectOf(fileId)
+    if (!p) return { ok: false, error: "只有项目文件里可以 @全体成员" }
+    if (!canManage(p, actor)) return { ok: false, error: "只有项目负责人可以 @全体成员" }
+    // 展开成项目里每一位能看这个文件的成员
+    mentions = [...new Set([...mentions.filter((e) => e !== MENTION_ALL), ...p.members.map((m) => m.email)])]
+  }
   const blocked = mentions.find((e) => !fileAccess(e, fileId))
   if (blocked) return { ok: false, error: `${findMember(blocked)?.name ?? blocked} 看不到这个文件，先给对方权限再 @` }
-  return { ok: true, mentions }
+  return { ok: true, mentions, everyone }
 }

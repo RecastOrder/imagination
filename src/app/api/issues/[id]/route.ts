@@ -19,12 +19,13 @@ export async function POST(req: Request, ctx: RouteContext<"/api/issues/[id]">) 
   const a = await load(ctx)
   if (a.error) return a.error
   const body = await req.json().catch(() => ({}))
-  const m = checkMentions(a.issue.fileId, body.mentions)
+  const m = checkMentions(a.issue.fileId, body.mentions, a.user.email)
   if (!m.ok) return NextResponse.json({ error: m.error }, { status: 400 })
   const r = replyIssue(a.issue.id, a.user.email, body.text)
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
   await notifyMentions({
     mentions: m.mentions,
+    everyone: m.everyone,
     from: a.user.email,
     issueLabel: `#${r.issue.number}`,
     fileName: r.issue.fileName,

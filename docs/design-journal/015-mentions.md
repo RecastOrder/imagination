@@ -53,3 +53,13 @@
 - `src/lib/server/email.ts`：`mentionEmail`
 - `src/lib/server/file-access.ts`：`mentionable`、`checkMentions`；问题和回复接口里校验并通知
 - `src/components/drive/annotate/mention-input.tsx`（@ 输入框）、`src/components/account/notification-bell.tsx`（铃铛，放在侧栏顶部）
+
+## 补充：@全体成员（负责人决定：可以）
+
+- 在项目文件里，**负责人和管理员**输入“@全”会看到“全体成员”，发出后项目里每一位成员都会收到通知（“提醒了项目全体成员”）。
+- 可编辑 / 仅浏览的成员看不到这个选项；绕过界面也会被服务器拒绝——避免人人都能群发。
+
+| 负责人 @全体成员 | 成员收到的通知 |
+|---|---|
+| ![](img/v14-g4-mention-all.png) | ![](img/v14-g5-bell-all.png) |
+

@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2Icon, CircleDashedIcon, FileSearchIcon, InfoIcon, PencilIcon, XCircleIcon } from "lucide-react"
+import { CheckCircle2Icon, CircleDashedIcon, FileSearchIcon, HistoryIcon, InfoIcon, PencilIcon, XCircleIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { runChecks, type CheckStatus } from "@/lib/projects/checks"
 import type { Condition, Project } from "@/lib/projects/types"
+import type { ConditionRound } from "@/lib/projects/condition-rounds"
+import { ConditionHistory } from "./condition-history"
 import { ConditionsEditor } from "./conditions-editor"
 import { cn } from "@/lib/utils"
 
@@ -21,14 +23,18 @@ const STATUS: Record<CheckStatus, { label: string; icon: typeof CheckCircle2Icon
  */
 export function ChecksTab({
   project,
+  rounds,
   canEdit,
   onSave,
 }: {
   project: Project
+  rounds: ConditionRound[]
   canEdit: boolean
-  onSave: (patch: { metrics: Record<string, number | undefined> } | { conditions: Condition[] }) => Promise<boolean>
+  onSave: (patch: { metrics: Record<string, number | undefined> } | { conditions: Condition[]; conditionsNote?: string }) => Promise<boolean>
 }) {
   const [editor, setEditor] = useState<null | "manual" | "pdf">(null)
+  const [history, setHistory] = useState(false)
+  const current = rounds.at(-1)
   const editorEl = editor && (
     <ConditionsEditor
       open
@@ -36,7 +42,7 @@ export function ChecksTab({
       projectId={project.id}
       conditions={project.conditions}
       startWithPdf={editor === "pdf"}
-      onSave={(conditions) => onSave({ conditions })}
+      onSave={(conditions, note) => onSave({ conditions, conditionsNote: note })}
     />
   )
   const [draft, setDraft] = useState<Record<string, string>>(() =>
@@ -102,7 +108,20 @@ export function ChecksTab({
           </Button>
         )}
       </div>
+      {current && (
+        // 当前生效的是第几轮：谁、什么时候、依据什么确认的
+        <p className="-mt-2 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+          规划条件：第 {current.round} 轮 · {current.savedByName}
+          {current.savedAt ? ` · ${new Date(current.savedAt).toLocaleDateString("zh-CN")} 确认` : ""}
+          {current.note && ` · 依据：${current.note}`}
+          <button type="button" onClick={() => setHistory(true)} className="inline-flex cursor-pointer items-center gap-1 underline-offset-2 hover:text-foreground hover:underline">
+            <HistoryIcon className="size-3" />
+            历史（{rounds.length} 轮）
+          </button>
+        </p>
+      )}
       {editorEl}
+      <ConditionHistory open={history} onOpenChange={setHistory} rounds={rounds} />
 
       <div className="overflow-x-auto rounded-xl border bg-surface">
         <table className="w-full min-w-[640px] text-sm">
