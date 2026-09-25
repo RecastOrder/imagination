@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2Icon, CircleDashedIcon, FileSearchIcon, HistoryIcon, InfoIcon, PencilIcon, XCircleIcon } from "lucide-react"
+import { AlertTriangleIcon, CheckCircle2Icon, CircleDashedIcon, FileSearchIcon, HistoryIcon, InfoIcon, PencilIcon, XCircleIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { runChecks, type CheckStatus } from "@/lib/projects/checks"
 import type { Condition, Project } from "@/lib/projects/types"
-import type { ConditionRound } from "@/lib/projects/condition-rounds"
+import { diffConditions, fmtCondition, type ConditionRound } from "@/lib/projects/condition-rounds"
 import { ConditionHistory } from "./condition-history"
 import { ConditionsEditor } from "./conditions-editor"
 import { cn } from "@/lib/utils"
@@ -56,6 +56,16 @@ export function ChecksTab({
   const dirty = project.conditions.some((c) => (project.metrics[c.key]?.toString() ?? "") !== draft[c.key])
   const counts = { pass: 0, fail: 0, missing: 0 }
   rows.forEach((r) => counts[r.status]++)
+
+  // 规划条件在最新一轮里变了（新增 / 修改），而设计指标还是之前核对的 → 提示重新核对（已定）
+  // 对比的基准：上次核对指标时生效的那一轮（中间改过好几轮也都算上）
+  const checkedAt = project.metricsCheckedAt ?? project.createdAt ?? 0
+  const baseline = [...rounds].reverse().find((r) => r.savedAt <= checkedAt) ?? rounds[0]
+  const changed =
+    current && baseline && baseline !== current && current.savedAt > checkedAt
+      ? diffConditions(baseline.conditions, current.conditions).filter((c) => c.kind !== "removed")
+      : []
+  const recheck = new Map(changed.map((c) => [c.label, c]))
 
   if (project.conditions.length === 0)
     return (
@@ -120,6 +130,15 @@ export function ChecksTab({
           </button>
         </p>
       )}
+      {changed.length > 0 && (
+        <p role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/50 bg-warning/5 px-4 py-3 text-sm">
+          <AlertTriangleIcon className="size-4 shrink-0 text-warning" />
+          <span className="min-w-0 flex-1">
+            规划条件在第 {baseline!.round + 1}{current!.round > baseline!.round + 1 ? `–${current!.round}` : ""} 轮有变更（{changed.map((c) => c.label).join("、")}），下面的设计指标是按之前的条件核对的，请重新核对。
+          </span>
+          {canEdit && <span className="text-xs text-muted-foreground">核对完点右下角“确认已核对”</span>}
+        </p>
+      )}
       {editorEl}
       <ConditionHistory open={history} onOpenChange={setHistory} rounds={rounds} />
 
@@ -139,7 +158,18 @@ export function ChecksTab({
               const { label, icon: Icon, cls } = STATUS[status]
               return (
                 <tr key={c.key} className="border-b last:border-0">
-                  <td className="px-4 py-2.5 font-medium">{c.label}</td>
+                  <td className="px-4 py-2.5 font-medium">
+                    {c.label}
+                    {recheck.has(c.label) && (
+                      <span className="mt-0.5 flex items-center gap-1 text-xs font-normal text-warning">
+                        <AlertTriangleIcon className="size-3" />
+                        {(() => {
+                          const ch = recheck.get(c.label)!
+                          return ch.kind === "changed" ? `由 ${fmtCondition(ch.before)} 改为 ${fmtCondition(ch.after)}` : "新增的条件"
+                        })()}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-2.5 tabular-nums">
                     {c.op === "<=" ? "≤" : c.op === ">=" ? "≥" : "="} {c.value}
                     {c.unit}
@@ -180,10 +210,11 @@ export function ChecksTab({
         {canEdit && (
           <Button
             className="ml-auto"
-            disabled={!dirty}
+            // 需要重新核对时，即使数字没改也可以“确认已核对”
+            disabled={!dirty && changed.length === 0}
             onClick={() => onSave({ metrics: preview.metrics as Record<string, number | undefined> })}
           >
-            保存指标
+            {dirty ? "保存指标" : changed.length ? "确认已核对" : "保存指标"}
           </Button>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { addRound } from "@/lib/server/condition-rounds"
+import { addRound, ensureBaselineRound } from "@/lib/server/condition-rounds"
 import { getCurrentUser } from "@/lib/server/current-user"
 import { canEditContent, canManage, canView, getProject, patchNeeds, updateProject, type ProjectPatch } from "@/lib/server/projects"
 
@@ -30,6 +30,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]"
       { error: patchNeeds(patch) === "manage" ? "只有项目负责人可以修改项目信息和成员权限" : "你在这个项目里是“仅浏览”，不能修改" },
       { status: 403 },
     )
+  if (patch.conditions) ensureBaselineRound(p)
   const r = updateProject(p.id, patch, user.email)
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
   // 规划条件每确认保存一次算一轮，永久保留

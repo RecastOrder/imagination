@@ -156,6 +156,7 @@ export function updateProject(id: string, patch: ProjectPatch, actor: string): {
     stage: patch.stage ?? p.stage,
     location: { ...p.location, ...patch.location },
     metrics: patch.metrics ? { ...p.metrics, ...patch.metrics } : p.metrics,
+    metricsCheckedAt: patch.metrics ? Date.now() : p.metricsCheckedAt,
     members: patch.members
       ? Array.from(new Map(patch.members.map((m) => [m.email, m])).values())
       : p.members,

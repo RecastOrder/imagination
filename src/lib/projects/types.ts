@@ -76,6 +76,8 @@ export interface Project {
   /** 已定：项目不能删除，只能归档。归档后只读保留，可以恢复 */
   archivedAt?: number
   archivedBy?: string
+  /** 设计指标最后一次保存 / 确认核对的时间：早于规划条件的最新一轮，就提示重新核对 */
+  metricsCheckedAt?: number
 }
 
 export const STAGES = ["方案", "初设", "施工图", "施工配合"]

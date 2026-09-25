@@ -29,10 +29,17 @@ export function listRounds(p: Project): ConditionRound[] {
   return rounds
 }
 
+/**
+ * 修改规划条件之前调用（传入修改前的项目）：把“初始录入”存成正式的第 1 轮，
+ * 否则第 1 轮会被误算成修改后的内容，看不出改了什么。
+ */
+export function ensureBaselineRound(before: Project) {
+  const existing = listRounds(before)
+  if (existing.length === 1 && existing[0].id === `${before.id}-r0`) store.set(existing[0].id, existing[0])
+}
+
 export function addRound(p: Project, conditions: Condition[], by: string, note?: string): ConditionRound {
   const existing = listRounds(p)
-  // 第一次保存时，把之前的“初始录入”也存成正式的第 1 轮，历史才完整
-  if (existing.length === 1 && existing[0].id === `${p.id}-r0`) store.set(existing[0].id, existing[0])
   const r: ConditionRound = {
     id: `cr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
     projectId: p.id,

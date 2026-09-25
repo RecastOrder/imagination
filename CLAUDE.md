@@ -34,7 +34,7 @@
 
 - 平台是**辅助工具**：不做规范审查、不当审核方。界面措辞要体现“供参考，结论由本人确认”；机械核对（数字比较）可以做，但必须写明不代替审查。
 - 规范被替代时必须标出，并列出变更内容和影响范围（`src/lib/projects/changes.ts`）。
-- 项目：位置细到区，按位置自动匹配三级要求（`src/lib/projects/regional.ts`）；权限判断在 `src/lib/server/projects.ts`。新建项目 = 功能权限 `project_create`（管理员自带，其他人由管理员单独打开），负责人默认发起人。项目**不能删除，只能归档**（`archivedAt`，只读保留、可恢复；归档后 `canEditContent` 为假）。规划条件：手动录入 + PDF 识别（`src/lib/projects/extract-conditions.ts`，只产出带原文片段的候选，必须本人确认后才保存）；每次确认保存算一轮，**每一轮永久保留**（`src/lib/server/condition-rounds.ts`，可对比每轮的变化）。
+- 项目：位置细到区，按位置自动匹配三级要求（`src/lib/projects/regional.ts`）；权限判断在 `src/lib/server/projects.ts`。新建项目 = 功能权限 `project_create`（管理员自带，其他人由管理员单独打开），负责人默认发起人。项目**不能删除，只能归档**（`archivedAt`，只读保留、可恢复；归档后 `canEditContent` 为假）。规划条件：手动录入 + PDF 识别（`src/lib/projects/extract-conditions.ts`，只产出带原文片段的候选，必须本人确认后才保存）；每次确认保存算一轮，**每一轮永久保留**（`src/lib/server/condition-rounds.ts`，可对比每轮的变化）；条件变了而指标还没重新核对（`metricsCheckedAt`）时，在指标核对里提示重新核对。
 - 权限（已定）：管理员全部权限；项目角色三档 负责人 / 可编辑 / 仅浏览（`MemberRole`）——“编辑内容”（`canEditContent`）与“管理项目和成员权限”（`canManage`）分开校验。个人文件用同一套档位（`src/lib/access.ts`：view / edit）开放给同事——**只在平台内部**，不复制、不发送、没有外部链接（`src/lib/server/shares.ts`），主人或管理员可以设置，开放文件夹覆盖其中所有文件。管理员能看全部成员的“我的”文件（含已停用的人），以管理员身份打开时记入查看记录（`src/lib/server/audit.ts`，`/admin/audit`，只有管理员能看，永久保留、不能删除）。离职 = 管理员停用账号，所有访问自动失效。仅浏览时查看器传 `readOnly`：可以测量、校准，不能标记、框选。界面用“权限 / 谁可以访问”，不要用“分享链接”之类会让人以为文件被发出去的说法。权限下拉统一用 `src/components/share/access-menu.tsx`。
 
 ## 学习陪伴模式（用户希望边做边学）
