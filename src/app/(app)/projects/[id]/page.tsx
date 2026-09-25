@@ -6,6 +6,7 @@ import { NoAccess } from "@/components/shell/no-access"
 import { PageSkeleton } from "@/components/shell/page-skeleton"
 import { getCurrentUser } from "@/lib/server/current-user"
 import { listMembers } from "@/lib/server/members"
+import { listRefs } from "@/lib/server/project-refs"
 import { accessOf, canView, getProject } from "@/lib/server/projects"
 
 export const metadata: Metadata = { title: "项目" }
@@ -21,7 +22,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     .map((m) => ({ email: m.email, name: m.name }))
   return (
     <Suspense fallback={<PageSkeleton variant="list" />}>
-      <ProjectView initial={p} access={accessOf(p, user.email)} directory={directory} />
+      <ProjectView initial={p} initialRefs={listRefs(p.id)} access={accessOf(p, user.email)} directory={directory} />
     </Suspense>
   )
 }

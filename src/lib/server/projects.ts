@@ -1,16 +1,16 @@
 import { PROJECT_SEED } from "@/lib/projects/seed"
 import { MEMBER_ROLES, type MemberRole, type Project, type ProjectAccess, type ProjectLocation, type ProjectMember } from "@/lib/projects/types"
+import { collection } from "./db"
 import { findMember, isAdmin } from "./members"
 
 /**
- * 项目（服务端）。演示版存内存，上线换数据库。
+ * 项目（服务端），存在数据库里（db.ts）。
  * 权限（三档 + 管理员）：
  * - 看：成员（任何角色）、管理员
  * - 编辑内容（指标、依据清单、标注、文件）：负责人、可编辑成员、管理员
  * - 管理项目（名称、类型、阶段、位置、成员及其权限）：负责人、管理员
  */
-const g = globalThis as unknown as { __projects?: Map<string, Project> }
-const store = (g.__projects ??= new Map(PROJECT_SEED.map((p) => [p.id, structuredClone(p)])))
+const store = collection<Project>("projects", () => PROJECT_SEED.map((p) => [p.id, structuredClone(p)]))
 
 export function listProjectsFor(email: string): Project[] {
   const admin = isAdmin(email)

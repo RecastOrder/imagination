@@ -8,9 +8,8 @@ import { ArrowLeftIcon, EyeIcon, FolderTreeIcon, PencilIcon } from "lucide-react
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
-import { useLocalStore } from "@/hooks/use-local-store"
 import { runChecks } from "@/lib/projects/checks"
-import { projectRefsStore } from "@/lib/projects/refs"
+import type { ProjectRef } from "@/lib/projects/refs"
 import { MEMBER_ROLES, type Project, type ProjectAccess } from "@/lib/projects/types"
 import { cn } from "@/lib/utils"
 import { ChecksTab } from "./checks-tab"
@@ -27,10 +26,13 @@ type Tab = "overview" | "refs" | "checks" | "members" | "tools"
  */
 export function ProjectView({
   initial,
+  initialRefs,
   access,
   directory,
 }: {
   initial: Project
+  /** 依据清单（服务端读好的，项目成员共享） */
+  initialRefs: ProjectRef[]
   access: ProjectAccess
   directory: { email: string; name: string }[]
 }) {
@@ -39,8 +41,8 @@ export function ProjectView({
   const router = useRouter()
   const pathname = usePathname()
   const tab = (params.get("tab") as Tab | null) ?? "overview"
-  const [refs] = useLocalStore(projectRefsStore)
-  const refCount = refs.filter((r) => r.projectId === project.id).length
+  const [refs, setRefs] = useState(initialRefs)
+  const refCount = refs.length
   const fails = runChecks(project).filter((r) => r.status === "fail").length
 
   const save = async (patch: object) => {
@@ -115,8 +117,8 @@ export function ProjectView({
         </nav>
 
         <div className="py-6">
-          {tab === "overview" && <OverviewTab project={project} canEdit={access.canManage} onSave={save} />}
-          {tab === "refs" && <RefsTab projectId={project.id} canEdit={access.canEdit} />}
+          {tab === "overview" && <OverviewTab project={project} refs={refs} canEdit={access.canManage} onSave={save} />}
+          {tab === "refs" && <RefsTab projectId={project.id} refs={refs} onRefsChange={setRefs} canEdit={access.canEdit} />}
           {tab === "checks" && <ChecksTab key={JSON.stringify(project.metrics)} project={project} canEdit={access.canEdit} onSave={save} />}
           {tab === "members" && <MembersTab project={project} access={access} directory={directory} onSave={save} />}
           {tab === "tools" && <ToolsTab project={project} />}

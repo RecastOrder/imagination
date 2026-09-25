@@ -11,7 +11,7 @@ import { SourceStatusTag } from "@/components/source/source-meta"
 import { useLocalStore } from "@/hooks/use-local-store"
 import { notesStore } from "@/lib/notebook/store"
 import { changeFor } from "@/lib/projects/changes"
-import { projectRefsStore } from "@/lib/projects/refs"
+import type { ProjectRef } from "@/lib/projects/refs"
 import { LOCATIONS, matchRequirements, type Level } from "@/lib/projects/regional"
 import type { Project, ProjectLocation } from "@/lib/projects/types"
 import { getSource } from "@/lib/sources/mock"
@@ -24,10 +24,12 @@ const LEVELS: Level[] = ["国家", "省市", "区"]
  */
 export function OverviewTab({
   project,
+  refs,
   canEdit,
   onSave,
 }: {
   project: Project
+  refs: ProjectRef[]
   canEdit: boolean
   onSave: (patch: { location: Partial<ProjectLocation> }) => Promise<boolean>
 }) {
@@ -35,7 +37,6 @@ export function OverviewTab({
   const [draft, setDraft] = useState(project.location)
   const loc = editing ? draft : project.location
   const matched = useMemo(() => matchRequirements(loc, project.type), [loc, project.type])
-  const [refs] = useLocalStore(projectRefsStore)
   const [notes] = useLocalStore(notesStore)
 
   // 被替代的规范 → 变更内容 + 本项目里引用它的地方
@@ -47,7 +48,7 @@ export function OverviewTab({
       return {
         source: s,
         change,
-        refs: refs.filter((x) => x.projectId === project.id && x.sourceId === s.id),
+        refs: refs.filter((x) => x.sourceId === s.id),
         notes: notes.filter((n) => n.sourceId === s.id),
       }
     })

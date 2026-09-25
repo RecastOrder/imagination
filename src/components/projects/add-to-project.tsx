@@ -31,7 +31,8 @@ export function AddToProject({
   onOpenChange?: (o: boolean) => void
   onAdded?: () => void
 }) {
-  const { projects: all, email } = useAccount()
+  const { projects: all } = useAccount()
+  const [busy, setBusy] = useState(false)
   // 只列出我能编辑的项目：“仅浏览”的项目不能往里加内容
   const projects = all.filter((p) => p.canEdit)
   const [last] = useLocalStore(lastProjectPref)
@@ -66,16 +67,23 @@ export function AddToProject({
         ) : (
           <form
             className="mt-3 space-y-3"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault()
-              if (!current) return
-              addProjectRef({ ...item(), projectId: current, category, note: note.trim() || undefined, addedBy: email })
-              setOpen(false)
-              onAdded?.()
-              toast(`已加入「${projects.find((p) => p.id === current)?.name}」· ${category}`, {
-                href: `/projects/${current}?tab=refs`,
-                linkLabel: "查看清单",
-              })
+              if (!current || busy) return
+              setBusy(true)
+              try {
+                await addProjectRef(current, { ...item(), category, note: note.trim() || undefined })
+                setOpen(false)
+                onAdded?.()
+                toast(`已加入「${projects.find((p) => p.id === current)?.name}」· ${category}`, {
+                  href: `/projects/${current}?tab=refs`,
+                  linkLabel: "查看清单",
+                })
+              } catch (err) {
+                toast((err as Error).message)
+              } finally {
+                setBusy(false)
+              }
             }}
           >
             <div className="space-y-0.5">
@@ -117,7 +125,7 @@ export function AddToProject({
               placeholder="为什么加这条（可选）"
               className="h-8 w-full rounded-md border border-input bg-surface px-2 text-sm outline-none focus:border-ring"
             />
-            <Button type="submit" size="sm" className="w-full">
+            <Button type="submit" size="sm" className="w-full" disabled={busy}>
               加入
             </Button>
           </form>

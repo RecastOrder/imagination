@@ -1,17 +1,17 @@
 import type { AccessLevel } from "@/lib/access"
 import { findNode, myTree, ownerOf } from "@/lib/drive/sample-tree"
 import { bestLevel, covers, type Share } from "@/lib/drive/shares"
+import { collection } from "./db"
 import { findMember, isAdmin } from "./members"
 
 /**
- * 个人文件共享（服务端）。演示版存内存，上线换数据库。
+ * 个人文件共享（服务端），存在数据库里（db.ts）。
  * 规则：
  * - 共享只发生在平台内部：文件不复制、不发送、没有外部链接，只是让同事在平台里能打开
  * - 文件主人和管理员可以共享、改档位、取消（管理员有全部权限，也能看所有人的“我的”文件）
  * - 只能共享给单位成员名单里、未停用的人；人员离职（账号停用）后自动失去所有访问
  * - 同一个人对同一项只有一条记录，再次共享 = 改档位
  */
-const g = globalThis as unknown as { __shares?: Map<string, Share> }
 const SEED: Share[] = [
   {
     id: "sh1",
@@ -34,7 +34,7 @@ const SEED: Share[] = [
     createdAt: Date.UTC(2026, 8, 21),
   },
 ]
-const store = (g.__shares ??= new Map(SEED.map((s) => [s.id, { ...s }])))
+const store = collection<Share>("shares", () => SEED.map((s) => [s.id, { ...s }]))
 
 export function listAllShares(): Share[] {
   return [...store.values()]

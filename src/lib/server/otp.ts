@@ -1,9 +1,10 @@
 import { createHash, randomInt } from "node:crypto"
 
+import { collection } from "./db"
 import { EMAIL_CONFIGURED, codeEmail, sendEmail } from "./email"
 
 /**
- * 邮箱验证码（演示版：存在服务器内存里，重启即清空；上线时换成 Redis 或数据库）。
+ * 邮箱验证码（存在数据库里，服务器重启不影响已发出的验证码）。
  *
  * 安全要点：
  * - 只保存验证码的哈希，不保存明文
@@ -21,8 +22,7 @@ interface Entry {
   attempts: number
 }
 
-const g = globalThis as unknown as { __otp?: Map<string, Entry> }
-const store = (g.__otp ??= new Map())
+const store = collection<Entry>("otp")
 const sha = (s: string) => createHash("sha256").update(s).digest("hex")
 
 export function normalizeEmail(raw: unknown): string | null {
@@ -53,8 +53,9 @@ export function verifyCode(email: string, code: string): VerifyResult {
   }
   if (e.attempts >= MAX_ATTEMPTS) return "too_many"
   if (sha(`${email}:${code}`) !== e.hash) {
-    e.attempts++
-    return e.attempts >= MAX_ATTEMPTS ? "too_many" : "wrong"
+    const attempts = e.attempts + 1
+    store.set(email, { ...e, attempts })
+    return attempts >= MAX_ATTEMPTS ? "too_many" : "wrong"
   }
   store.delete(email) // 验证码只能用一次
   return "ok"

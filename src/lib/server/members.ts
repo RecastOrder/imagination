@@ -1,11 +1,11 @@
 import { MEMBERS, ROLES, resolve, type Member, type RoleId } from "@/lib/auth/permissions"
+import { collection } from "./db"
 
 /**
  * 成员名单（邀请制）：只有名单里的邮箱才能登录。
- * 演示版存在服务器内存里，初始数据来自 permissions.ts；上线时换成数据库。
+ * 存在数据库里（db.ts），第一次启动时写入 permissions.ts 里的示例成员。
  */
-const g = globalThis as unknown as { __members?: Map<string, Member> }
-const store = (g.__members ??= new Map(MEMBERS.map((m) => [m.email, { ...m }])))
+const store = collection<Member>("members", () => MEMBERS.map((m) => [m.email, { ...m }]))
 
 /** 常见个人邮箱域名：邀请时拒绝，要求使用工作单位邮箱 */
 export const PERSONAL_MAIL_DOMAINS = [

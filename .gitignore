@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Office 预览转换缓存
 /.cache
+
+# 数据库文件（第 ③ 步）：服务器上的真实数据，不提交
+/.data/

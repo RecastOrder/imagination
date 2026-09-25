@@ -5,14 +5,26 @@ import { CornerDownRightIcon, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { SourceStatusTag } from "@/components/source/source-meta"
-import { useLocalStore } from "@/hooks/use-local-store"
-import { REF_CATEGORIES, projectRefsStore, removeProjectRef } from "@/lib/projects/refs"
+import { toast } from "@/components/ui/toast"
+import { REF_CATEGORIES, removeProjectRef, type ProjectRef } from "@/lib/projects/refs"
 import { getSource } from "@/lib/sources/mock"
 
 /** 依据清单：按分类列出成员加进来的内容，点击回到原文 */
-export function RefsTab({ projectId, canEdit }: { projectId: string; canEdit: boolean }) {
-  const [all] = useLocalStore(projectRefsStore)
-  const refs = all.filter((r) => r.projectId === projectId)
+export function RefsTab({
+  projectId,
+  refs,
+  onRefsChange,
+  canEdit,
+}: {
+  projectId: string
+  refs: ProjectRef[]
+  onRefsChange: (next: ProjectRef[]) => void
+  canEdit: boolean
+}) {
+  const remove = (id: string) =>
+    removeProjectRef(projectId, id)
+      .then(() => onRefsChange(refs.filter((r) => r.id !== id)))
+      .catch((e: Error) => toast(e.message))
 
   if (refs.length === 0)
     return (
@@ -51,7 +63,7 @@ export function RefsTab({ projectId, canEdit }: { projectId: string; canEdit: bo
                           variant="ghost"
                           size="icon-sm"
                           className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-md:opacity-100"
-                          onClick={() => removeProjectRef(r.id)}
+                          onClick={() => remove(r.id)}
                           aria-label="从清单移除"
                         >
                           <Trash2Icon />

@@ -1,3 +1,4 @@
+import { collection } from "./db"
 import { findMember } from "./members"
 
 /**
@@ -6,7 +7,7 @@ import { findMember } from "./members"
  * Cookie 里只放“会话编号.过期时间.签名”；会话的详细信息（谁、哪类设备、何时登录）存在服务器。
  * 这样服务器可以随时让某个会话作废——比如同类设备上有了新的登录。
  * 签名用 HMAC-SHA256 + 服务器密钥，Cookie 设为 httpOnly，页面脚本读不到。
- * 演示版会话存在内存里，服务重启后所有人需要重新登录；上线时换成 Redis / 数据库。
+ * 会话存在数据库里：服务器重启后大家不用重新登录。
  */
 export const SESSION_COOKIE = "im_session"
 export const LAST_EMAIL_COOKIE = "im_last_email"
@@ -36,8 +37,9 @@ export interface SessionRecord {
   endReason?: EndReason
 }
 
-const g = globalThis as unknown as { __sessions?: Map<string, SessionRecord> }
-const store = (g.__sessions ??= new Map())
+const store = collection<SessionRecord>("sessions")
+/** “最近活动时间”不必每个请求都写库：超过 1 分钟才更新一次 */
+const TOUCH_INTERVAL_MS = 60 * 1000
 
 const enc = new TextEncoder()
 async function hmac(data: string) {
@@ -58,7 +60,7 @@ export async function createSession(email: string, userAgent: string) {
     .sort((a, b) => b.createdAt - a.createdAt)
   const keep = SINGLE_SESSION_PER_ACCOUNT ? 0 : MAX_SESSIONS_PER_DEVICE_TYPE - 1
   const replaced = active.slice(keep)
-  for (const s of replaced) Object.assign(s, { endedAt: now, endReason: "replaced" as EndReason })
+  for (const s of replaced) store.set(s.sid, { ...s, endedAt: now, endReason: "replaced" })
 
   const sid = crypto.randomUUID()
   store.set(sid, { sid, email, device, userAgent, createdAt: now, lastSeenAt: now })
@@ -83,16 +85,20 @@ export async function checkSession(token: string | undefined): Promise<SessionCh
   if (!s) return { ok: false, reason: "invalid" }
   if (s.endedAt) return { ok: false, reason: s.endReason ?? "revoked" }
   if (findMember(s.email)?.status === "disabled") {
-    Object.assign(s, { endedAt: Date.now(), endReason: "disabled" as EndReason })
+    store.set(sid, { ...s, endedAt: Date.now(), endReason: "disabled" })
     return { ok: false, reason: "disabled" }
   }
-  s.lastSeenAt = Date.now()
+  const now = Date.now()
+  if (now - s.lastSeenAt > TOUCH_INTERVAL_MS) {
+    s.lastSeenAt = now
+    store.set(sid, s)
+  }
   return { ok: true, session: s }
 }
 
 export function endSession(sid: string, reason: EndReason) {
   const s = store.get(sid)
-  if (s && !s.endedAt) Object.assign(s, { endedAt: Date.now(), endReason: reason })
+  if (s && !s.endedAt) store.set(sid, { ...s, endedAt: Date.now(), endReason: reason })
 }
 
 export function listActiveSessions(email: string) {
