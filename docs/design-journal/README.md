@@ -47,3 +47,4 @@
 - [014 规划条件录入（手动 + PDF 识别）与项目归档](./014-conditions-archive.md)
 - [015 @提及与通知：只通知被 @ 的人](./015-mentions.md)
 - [016 资料库接真资料：资料仓库与“未核对”状态](./016-real-sources.md)
+- [017 对话接上 Cairn 知识库](./017-cairn-chat.md)
