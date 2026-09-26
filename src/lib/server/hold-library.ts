@@ -104,3 +104,21 @@ export async function holdStream(path: string): Promise<Response> {
     return new Response("hold 资料服务连不上", { status: 502 })
   }
 }
+
+/** 管理员「我的文件」= hold 上的文件：列一个文件夹（hold 端只允许 /tank 以内） */
+export interface HoldFsEntry {
+  name: string
+  dir: boolean
+  size: number | null
+  mtime: number
+}
+export async function holdFsList(path: string, offset = 0): Promise<{ path: string; total: number; entries: HoldFsEntry[] } | { error: string; status: number }> {
+  if (!holdEnabled()) return { error: "hold 资料服务没有配置", status: 503 }
+  try {
+    const r = await call(`/v1/fs/list?${new URLSearchParams({ path, offset: String(offset) })}`, 20000)
+    if (!r.ok) return { error: r.status === 404 ? "不是 hold /tank 以内的文件夹" : `hold 返回 ${r.status}`, status: r.status === 404 ? 404 : 502 }
+    return await r.json()
+  } catch {
+    return { error: "hold 资料服务连不上", status: 502 }
+  }
+}
