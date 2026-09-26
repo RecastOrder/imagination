@@ -204,3 +204,58 @@ export async function holdFsUploadStatus(dir: string, uid: string, scope: string
     return { status: 502, body: { error: "hold 资料服务连不上" } }
   }
 }
+
+/**
+ * 网盘连接器（spec 108 §6）：一律按登录的人本人（x-actor），hold 那一侧也只按这个人取他自己的网盘。
+ * scope：「保存到服务器」与用量要带成员自己的文件夹作范围。原样把 hold 的状态码与中文错误带回来。
+ */
+export async function holdDrive(
+  method: "GET" | "POST",
+  path: string,
+  actor: string,
+  opts: { body?: unknown; scope?: string; timeoutMs?: number } = {},
+): Promise<{ status: number; body: unknown }> {
+  if (!holdEnabled()) return { status: 503, body: { error: "hold 资料服务没有配置" } }
+  try {
+    const r = await fetch(`${process.env.HOLD_LIB_URL}${path}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${process.env.HOLD_LIB_TOKEN}`,
+        "x-actor": actor,
+        ...(opts.scope ? { "x-edit-scope": opts.scope } : {}),
+        ...(opts.body !== undefined ? { "content-type": "application/json" } : {}),
+      },
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      cache: "no-store",
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 30000),
+    })
+    return { status: r.status, body: await r.json().catch(() => ({ error: `hold 返回 ${r.status}` })) }
+  } catch {
+    return { status: 502, body: { error: "hold 资料服务连不上" } }
+  }
+}
+
+/** 网盘文件实时读（按区间转发，不落副本）：把浏览器的 Range 带过去，hold 的 206/200 原样带回来 */
+export async function holdDriveStream(path: string, actor: string, range: string | null): Promise<Response> {
+  if (!holdEnabled()) return new Response("hold 资料服务没有配置", { status: 503 })
+  const ctl = new AbortController()
+  const timer = setTimeout(() => ctl.abort(), 30000)
+  try {
+    const r = await fetch(`${process.env.HOLD_LIB_URL}${path}`, {
+      headers: { authorization: `Bearer ${process.env.HOLD_LIB_TOKEN}`, "x-actor": actor, ...(range ? { range } : {}) },
+      cache: "no-store",
+      signal: ctl.signal,
+    })
+    clearTimeout(timer)
+    if (!r.ok || !r.body) {
+      const b = await r.json().catch(() => ({}))
+      return Response.json({ error: b.error ?? `hold 返回 ${r.status}` }, { status: r.status === 404 || r.status === 401 ? r.status : 502 })
+    }
+    const h = new Headers({ "content-type": r.headers.get("content-type") ?? "application/octet-stream", "accept-ranges": "bytes" })
+    for (const k of ["content-length", "content-range"]) if (r.headers.get(k)) h.set(k, r.headers.get(k)!)
+    return new Response(r.body, { status: r.status, headers: h })
+  } catch {
+    clearTimeout(timer)
+    return new Response("hold 资料服务连不上", { status: 502 })
+  }
+}

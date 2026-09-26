@@ -8,7 +8,8 @@ import { holdFsEdit, holdFsList, holdFsUploadChunk, holdFsUploadStatus, holdStre
  * - 「存储总库」：管理员看整个 /tank，只有 inbox 与 baidu 能改，其余只读（成员的文件对管理员也只读）。
  * 「谁能改哪里」这一侧只决定**给哪个范围**（scope），hold 那一侧按真实路径再判一次「要改的东西在不在这个范围里」。
  */
-export const PEOPLE_ROOT = "/tank/people"
+/** 测试实例可以换根（HOLD_PEOPLE_ROOT）；生产不设 = /tank/people */
+export const PEOPLE_ROOT = process.env.HOLD_PEOPLE_ROOT || "/tank/people"
 /** 管理员在存储总库里拿到的范围：inbox + baidu（hold 端的 SHARED_SCOPE） */
 export const SHARED_SCOPE = "shared"
 export const SHARED_ROOTS = ["/tank/inbox", "/tank/baidu"]

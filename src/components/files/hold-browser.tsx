@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   ArrowLeftIcon,
+  CloudIcon,
   ChevronRightIcon,
   DownloadIcon,
   FileIcon,
@@ -70,6 +71,13 @@ export function HoldBrowser({
   subtitle,
   groups,
   annotatable,
+  topSlot,
+  extraFolders,
+  parentCrumb,
+  select,
+  dropzone,
+  onChanged,
+  idPrefix = "hold:",
 }: {
   api: string
   root: string
@@ -80,6 +88,20 @@ export function HoldBrowser({
   groups?: BrowserGroup[]
   /** 可编辑区里的 PDF 能不能做自己的标注（服务端 fileAccess 也会判） */
   annotatable?: boolean
+  /** 标题下面插的东西（我的文件：用量 + 网盘栏） */
+  topSlot?: React.ReactNode
+  /** 根目录最上面多出来的文件夹（已连接的网盘），点了去 href */
+  extraFolders?: { name: string; label: string; href: string; hint?: string }[]
+  /** 面包屑最前面再加一级（在网盘里时：「我的文件」） */
+  parentCrumb?: { label: string; href: string }
+  /** 文件可以勾选，勾了之后出现一个按钮（网盘里：「保存到服务器」） */
+  select?: { label: string; run: (paths: string[]) => Promise<boolean> | boolean }
+  /** 可编辑时在列表上方放一块大的拖拽上传区 */
+  dropzone?: boolean
+  /** 上传或改动完成（用量要跟着刷新） */
+  onChanged?: () => void
+  /** 阅读器里文件的编号前缀（个人标注按它存）：服务器上的 hold: · 网盘里的 drive:baidu: */
+  idPrefix?: string
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -90,7 +112,13 @@ export function HoldBrowser({
   const [data, setData] = useState<Listing>()
   const [more, setMore] = useState(false)
   const [tick, setTick] = useState(0)
-  const reload = useCallback(() => setTick((t) => t + 1), [])
+  const reload = useCallback(() => {
+    setTick((t) => t + 1)
+    onChanged?.()
+  }, [onChanged])
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  // 根是 "/"（网盘）时拼路径不能拼出 "//名字"
+  const join = (a: string, b: string) => (a === "/" ? `/${b}` : `${a}/${b}`)
 
   const nav = useCallback(
     (patch: Record<string, string | null>, replace = false) => {
@@ -136,8 +164,8 @@ export function HoldBrowser({
   const atRoot = path === root
 
   // 面包屑：root 以上的部分收成一个名字（「我的文件」/「tank」）
-  const rel = path === root ? [] : path.slice(root.length + 1).split("/")
-  const crumbs = [{ label: rootLabel, p: root }, ...rel.map((c, i) => ({ label: c === TRASH ? "回收站" : c, p: `${root}/${rel.slice(0, i + 1).join("/")}` }))]
+  const rel = path === root ? [] : path.slice(root === "/" ? 1 : root.length + 1).split("/")
+  const crumbs = [{ label: rootLabel, p: root }, ...rel.map((c, i) => ({ label: c === TRASH ? "回收站" : c, p: join(root, rel.slice(0, i + 1).join("/")) }))]
 
   const [dialog, setDialog] = useState<null | { kind: "mkdir" } | { kind: "rename"; e: Entry } | { kind: "move"; e: Entry }>(null)
   const uploader = useChunkUploader(api, reload)
@@ -164,13 +192,15 @@ export function HoldBrowser({
     .sort((a, b) => (a.name === TRASH ? -1 : b.name === TRASH ? 1 : 0))
 
   const rowProps = (e: Entry) => {
-    const full = `${path}/${e.name}`
+    const full = join(path, e.name)
     return {
       e,
       label: e.name === TRASH ? "回收站" : e.name,
       active: openFile === full,
       onOpen: () => (e.dir ? go(full) : nav({ file: full }, !!openFile)),
       download: e.dir ? undefined : fileUrl(full, true),
+      picked: select && !e.dir ? picked.has(full) : undefined,
+      onPick: select && !e.dir ? () => setPicked((s) => { const n = new Set(s); if (n.has(full)) n.delete(full); else n.add(full); return n }) : undefined,
       actions:
         editable && e.name !== TRASH && !e.name.startsWith(".")
           ? [
@@ -197,9 +227,18 @@ export function HoldBrowser({
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">{title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+        {topSlot}
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <nav aria-label="位置" className="flex min-w-0 flex-1 flex-wrap items-center gap-1 text-sm">
+            {parentCrumb && (
+              <span className="flex items-center gap-1">
+                <button type="button" onClick={() => router.push(parentCrumb.href)} className="cursor-pointer text-muted-foreground hover:text-foreground">
+                  {parentCrumb.label}
+                </button>
+                <ChevronRightIcon className="size-3.5 text-muted-foreground" />
+              </span>
+            )}
             {crumbs.map((c, i) => {
               const last = i === crumbs.length - 1
               return (
@@ -249,6 +288,35 @@ export function HoldBrowser({
           ))}
         </div>
 
+        {select && picked.size > 0 && (
+          <div data-select-bar className="mt-4 flex items-center gap-3 rounded-lg border bg-primary-subtle px-3 py-2 text-sm">
+            <span>已选 {picked.size} 个文件</span>
+            <Button
+              size="sm"
+              data-select-run
+              onClick={async () => {
+                if (await select.run([...picked])) setPicked(new Set())
+              }}
+            >
+              {select.label}
+            </Button>
+            <button type="button" onClick={() => setPicked(new Set())} className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+              取消选择
+            </button>
+          </div>
+        )}
+        {dropzone && editable && (
+          <button
+            type="button"
+            data-dropzone
+            onClick={() => inputRef.current?.click()}
+            className="mt-4 flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed border-border-strong bg-surface px-6 py-8 text-center hover:border-primary"
+          >
+            <UploadCloudIcon className="size-7 text-muted-foreground" />
+            <span className="font-medium">拖拽文件到这里，或点击选择</span>
+            <span className="text-xs text-muted-foreground">大文件分块传，断了能接着传 · 传完在服务器上算一次指纹（SHA-256）· 重名自动编号，不会覆盖</span>
+          </button>
+        )}
         <UploadList items={uploader.items} onClear={uploader.clearDone} />
 
         {loading ? (
@@ -285,6 +353,19 @@ export function HoldBrowser({
             <p className="mt-4 text-xs text-muted-foreground tabular-nums">
               共 {shown.length} 项{data.total > data.entries.length && `（文件夹里共 ${data.total} 项，已显示 ${data.entries.length} 项）`}
             </p>
+            {atRoot && extraFolders && extraFolders.length > 0 && (
+              <ul className="mt-2 divide-y rounded-lg border" aria-label="已连接的网盘">
+                {extraFolders.map((f) => (
+                  <li key={f.name} data-hold-entry={f.name} data-drive-folder className="flex items-center gap-2 px-3">
+                    <button type="button" onClick={() => router.push(f.href)} className="flex h-10 min-w-0 flex-1 cursor-pointer items-center gap-3 text-left text-sm hover:text-primary">
+                      <CloudIcon className="size-4 shrink-0 text-primary" />
+                      <span className="min-w-0 flex-1 truncate">{f.label}</span>
+                      {f.hint && <span className="text-xs text-muted-foreground">{f.hint}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             {shown.length === 0 ? (
               <div className="mt-2 rounded-lg border border-dashed px-6 py-14 text-center text-sm text-muted-foreground">
                 {editable ? "这里还是空的。点右上角「上传」，或者把文件拖进这个窗口。" : "这个文件夹是空的"}
@@ -319,6 +400,7 @@ export function HoldBrowser({
           url={fileUrl(openFile)}
           download={fileUrl(openFile, true)}
           full={full}
+          id={`${idPrefix}${openFile}`}
           readOnly={!(annotatable && editableFor(openFile, data))}
           onFull={(v) => nav({ full: v ? "1" : null }, true)}
           onClose={() => nav({ file: null, full: null }, true)}
@@ -366,6 +448,8 @@ function Row({
   onOpen,
   download,
   actions,
+  picked,
+  onPick,
 }: {
   e: Entry
   label: string
@@ -373,11 +457,16 @@ function Row({
   onOpen: () => void
   download?: string
   actions?: { label: string; icon: typeof PencilIcon; run: () => void }[]
+  picked?: boolean
+  onPick?: () => void
 }) {
   const Icon = e.name === TRASH ? Trash2Icon : e.dir ? FolderIcon : FileIcon
   const [menu, setMenu] = useState(false)
   return (
     <li data-hold-entry={e.name} className={cn("flex items-center gap-2 px-3", active && "bg-primary-subtle")}>
+      {onPick && (
+        <input type="checkbox" checked={!!picked} onChange={onPick} aria-label={`选择 ${e.name}`} data-pick className="size-4 shrink-0 cursor-pointer accent-primary" />
+      )}
       <button type="button" onClick={onOpen} className="flex h-10 min-w-0 flex-1 cursor-pointer items-center gap-3 text-left text-sm hover:text-primary">
         <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -422,6 +511,7 @@ function Row({
 
 /** 右侧抽屉：按文件类型选查看器（PDF · Office · 图片 · 文本 · 音视频 · 3D），可以全屏 */
 function FilePanel({
+  id,
   path,
   url,
   download,
@@ -430,6 +520,7 @@ function FilePanel({
   onFull,
   onClose,
 }: {
+  id: string
   path: string
   url: string
   download: string
@@ -478,7 +569,7 @@ function FilePanel({
         </Button>
       </header>
       <div className="min-h-0 flex-1 overflow-auto">
-        <ViewerHost file={{ type: "file", id: `hold:${path}`, name, url }} readOnly={readOnly} download={download} printable />
+        <ViewerHost file={{ type: "file", id, name, url }} readOnly={readOnly} download={download} printable />
       </div>
     </aside>
   )
@@ -509,10 +600,13 @@ function NameDialog({ title, initial, onCancel, onSubmit }: { title: string; ini
   )
 }
 
-/** 移动：在可以改的范围里逐层选一个文件夹，点「移到这里」 */
-function MoveDialog({
+/** 移动：在可以改的范围里逐层选一个文件夹，点「移到这里」（「保存到服务器」选存放位置也用它） */
+export function MoveDialog({
   api,
   name,
+  title,
+  confirmLabel = "移到这里",
+  allowStart = false,
   start,
   roots,
   onCancel,
@@ -520,6 +614,10 @@ function MoveDialog({
 }: {
   api: string
   name: string
+  title?: string
+  confirmLabel?: string
+  /** 起点本身也能选（保存到服务器：默认就存在当前这一层） */
+  allowStart?: boolean
   start: string
   roots: string[]
   onCancel: () => void
@@ -542,7 +640,7 @@ function MoveDialog({
   return (
     <Dialog open onOpenChange={(o) => !o && onCancel()}>
       <DialogContent>
-        <DialogTitle>把「{name}」移到…</DialogTitle>
+        <DialogTitle>{title ?? `把「${name}」移到…`}</DialogTitle>
         <DialogDescription className="break-all">现在选中：{at}</DialogDescription>
         {roots.length > 1 && (
           <div className="mt-2 flex gap-1">
@@ -581,8 +679,8 @@ function MoveDialog({
           <Button variant="outline" onClick={onCancel}>
             取消
           </Button>
-          <Button onClick={() => onSubmit(at)} disabled={at === start} data-move-here>
-            移到这里
+          <Button onClick={() => onSubmit(at)} disabled={!allowStart && at === start} data-move-here>
+            {confirmLabel}
           </Button>
         </div>
       </DialogContent>

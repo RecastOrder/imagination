@@ -13,6 +13,8 @@ import { personalAccess } from "./shares"
  */
 export function fileAccess(email: string, fileId: string): AccessLevel | null {
   // hold 上的文件（「我的文件」/「存储总库」打开的，id = hold:<完整路径>）：自己文件夹里的 ⇒ 能改；管理员看 /tank 里别的 ⇒ 只看
+  // 自己连上的网盘里的文件（drive:<网盘>:<路径>）：接口本来就只按本人取他自己的网盘 ⇒ 个人标注可以做（只自己看得到）
+  if (fileId.startsWith("drive:")) return "view"
   if (fileId.startsWith("hold:")) {
     const p = fileId.slice(5)
     const home = homeOf(email)
