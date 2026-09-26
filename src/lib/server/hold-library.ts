@@ -127,13 +127,80 @@ export interface HoldFsEntry {
   size: number | null
   mtime: number
 }
-export async function holdFsList(path: string, offset = 0): Promise<{ path: string; total: number; entries: HoldFsEntry[] } | { error: string; status: number }> {
+/** editable：这个文件夹里能改（inbox / baidu，owner 2026-09-26）；trash：在回收站里（只能放回）；editRoot：属于哪个可编辑区 */
+export interface HoldFsListing {
+  path: string
+  total: number
+  entries: HoldFsEntry[]
+  editable?: boolean
+  trash?: boolean
+  editRoot?: string | null
+}
+export async function holdFsList(path: string, offset = 0, scope?: string): Promise<HoldFsListing | { error: string; status: number }> {
   if (!holdEnabled()) return { error: "hold 资料服务没有配置", status: 503 }
   try {
-    const r = await call(`/v1/fs/list?${new URLSearchParams({ path, offset: String(offset) })}`, 20000)
+    const r = await call(`/v1/fs/list?${new URLSearchParams({ path, offset: String(offset) })}`, 20000, scope ? { "x-edit-scope": scope } : {})
     if (!r.ok) return { error: r.status === 404 ? "不是 hold /tank 以内的文件夹" : `hold 返回 ${r.status}`, status: r.status === 404 ? 404 : 502 }
     return await r.json()
   } catch {
     return { error: "hold 资料服务连不上", status: 502 }
+  }
+}
+
+/**
+ * 改 hold 上的可编辑区（只有 /tank/inbox 与 /tank/baidu；其余一律只读 —— owner 2026-09-26 逐字
+ * 「整理好的资料，系统与备份，成员文件 对于管理员为只读。 inbox baidu为可以编辑的文件区域。」）。
+ * 哪里能改由 hold 那一端按真实路径判（这一侧不另判一份，免得两处规则不一致）；actor = 谁改的，hold 记进账本。
+ * 原样把 hold 的状态码和中文错误带回来。
+ */
+export async function holdFsEdit(op: string, body: Record<string, unknown>, actor: string, scope: string): Promise<{ status: number; body: unknown }> {
+  if (!holdEnabled()) return { status: 503, body: { error: "hold 资料服务没有配置" } }
+  try {
+    const r = await fetch(`${process.env.HOLD_LIB_URL}/v1/fs/edit/${encodeURIComponent(op)}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${process.env.HOLD_LIB_TOKEN}`, "content-type": "application/json", "x-actor": actor, "x-edit-scope": scope },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: AbortSignal.timeout(60000),
+    })
+    return { status: r.status, body: await r.json().catch(() => ({ error: `hold 返回 ${r.status}` })) }
+  } catch {
+    return { status: 502, body: { error: "hold 资料服务连不上" } }
+  }
+}
+
+/** 分块上传的一块（请求体原样流给 hold，不在这台机器上缓冲整块以外的东西） */
+export async function holdFsUploadChunk(
+  q: { dir: string; name: string; uid: string; offset: number; total: number },
+  body: ReadableStream<Uint8Array>,
+  length: number,
+  actor: string,
+  scope: string,
+): Promise<{ status: number; body: unknown }> {
+  if (!holdEnabled()) return { status: 503, body: { error: "hold 资料服务没有配置" } }
+  try {
+    const qs = new URLSearchParams({ dir: q.dir, name: q.name, uid: q.uid, offset: String(q.offset), total: String(q.total) })
+    const r = await fetch(`${process.env.HOLD_LIB_URL}/v1/fs/upload?${qs}`, {
+      method: "PUT",
+      headers: { authorization: `Bearer ${process.env.HOLD_LIB_TOKEN}`, "content-length": String(length), "x-actor": actor, "x-edit-scope": scope },
+      body,
+      // @ts-expect-error Node 的 fetch 流式上传要声明 duplex（DOM 类型里没有这个字段）
+      duplex: "half",
+      cache: "no-store",
+      signal: AbortSignal.timeout(300000),
+    })
+    return { status: r.status, body: await r.json().catch(() => ({ error: `hold 返回 ${r.status}` })) }
+  } catch {
+    return { status: 502, body: { error: "hold 资料服务连不上（这一块可以重传）" } }
+  }
+}
+
+export async function holdFsUploadStatus(dir: string, uid: string, scope: string): Promise<{ status: number; body: unknown }> {
+  if (!holdEnabled()) return { status: 503, body: { error: "hold 资料服务没有配置" } }
+  try {
+    const r = await call(`/v1/fs/upload-status?${new URLSearchParams({ dir, uid })}`, 15000, { "x-edit-scope": scope })
+    return { status: r.status, body: await r.json().catch(() => ({})) }
+  } catch {
+    return { status: 502, body: { error: "hold 资料服务连不上" } }
   }
 }

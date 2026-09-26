@@ -95,7 +95,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function PeekWatcher({ onChange }: { onChange: (open: boolean) => void }) {
-  const open = useSearchParams().has("peek")
+  // 右侧抽屉：资料预览（?peek=）与「我的文件 / 存储总库」打开的文件（?file=）都算
+  const q = useSearchParams()
+  const open = q.has("peek") || q.has("file")
   useEffect(() => onChange(open), [open, onChange])
   return null
 }

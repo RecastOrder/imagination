@@ -1,6 +1,7 @@
 import type { AccessLevel } from "@/lib/access"
 import { ownerOf } from "@/lib/drive/sample-tree"
-import { findMember, listMembers } from "./members"
+import { homeOf, within } from "./hold-files"
+import { findMember, isRealAdmin, listMembers } from "./members"
 import { canEditContent, canManage, canView, getProject } from "./projects"
 import { personalAccess } from "./shares"
 
@@ -11,6 +12,13 @@ import { personalAccess } from "./shares"
  * - 平台资料库：都只能看
  */
 export function fileAccess(email: string, fileId: string): AccessLevel | null {
+  // hold 上的文件（「我的文件」/「存储总库」打开的，id = hold:<完整路径>）：自己文件夹里的 ⇒ 能改；管理员看 /tank 里别的 ⇒ 只看
+  if (fileId.startsWith("hold:")) {
+    const p = fileId.slice(5)
+    const home = homeOf(email)
+    if (home && within(home, p)) return "edit"
+    return isRealAdmin(email) && within("/tank", p) ? "view" : null
+  }
   if (fileId.startsWith("proj/")) {
     const p = getProject(fileId.split("/")[1])
     if (!p || !canView(p, email)) return null
