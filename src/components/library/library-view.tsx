@@ -10,8 +10,8 @@ import { Kbd } from "@/components/ui/kbd"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { SourceCard } from "@/components/source/source-card"
 import { usePeek } from "@/hooks/use-peek"
-import { filterChips, filtersToSearch, matchSource, parseFilters } from "@/lib/sources/filters"
-import { useSourceList } from "@/hooks/use-sources"
+import { filterChips, filtersToSearch, parseFilters } from "@/lib/sources/filters"
+import { useSourceSearch } from "@/hooks/use-sources"
 import type { SourceFilters } from "@/lib/sources/types"
 import { Facets } from "./facets"
 import { SceneBar } from "./scene-bar"
@@ -21,7 +21,6 @@ import { SceneBar } from "./scene-bar"
  * 所有筛选条件都写在 URL 里 —— 和对话里 AI 解析出的条件是同一种格式，
  * 所以对话可以一键把条件“交接”到这里。
  */
-const SHOWN = 100
 
 export function LibraryView() {
   const router = useRouter()
@@ -30,7 +29,7 @@ export function LibraryView() {
   const filters = useMemo(() => parseFilters(params), [params])
   const { peekId, openPeek } = usePeek()
   const inputRef = useRef<HTMLInputElement>(null)
-  const { sources, regions, loading, error } = useSourceList()
+  const { data, loading, error } = useSourceSearch(filters)
 
   useEffect(() => {
     if (params.get("focus")) inputRef.current?.focus()
@@ -43,9 +42,9 @@ export function LibraryView() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }
 
-  const results = sources.filter((s) => matchSource(s, filters))
-  /** 一次只画前 SHOWN 条：资料有几千份，全画出来页面会卡；总数照常显示 */
-  const shown = results.slice(0, SHOWN)
+  /** 服务端只回前 100 条：资料有二十多万份，总数照常显示 */
+  const shown = data?.items ?? []
+  const total = data?.total ?? 0
   const chips = filterChips(filters)
 
   return (
@@ -83,7 +82,7 @@ export function LibraryView() {
             <SheetContent side="bottom" className="h-[80dvh]">
               <SheetTitle className="border-b px-4 py-3 text-base">筛选</SheetTitle>
               <div className="min-h-0 flex-1 overflow-y-auto p-4">
-                <Facets sources={sources} regions={regions} filters={filters} onChange={setFilters} />
+                <Facets counts={data?.facets} filters={filters} onChange={setFilters} />
               </div>
             </SheetContent>
           </Sheet>
@@ -96,13 +95,14 @@ export function LibraryView() {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-5xl gap-8 px-4 py-6 sm:px-6">
           <aside className="hidden w-52 shrink-0 lg:block" aria-label="筛选">
-            <Facets sources={sources} regions={regions} filters={filters} onChange={setFilters} />
+            <Facets counts={data?.facets} filters={filters} onChange={setFilters} />
           </aside>
 
           <section className="min-w-0 flex-1" aria-label="检索结果">
             <div className="mb-3 flex flex-wrap items-center gap-1.5">
               <p className="mr-2 text-sm text-muted-foreground">
-                共 <span className="font-medium text-foreground tabular-nums">{results.length}</span> 份资料
+                共 <span className="font-medium text-foreground tabular-nums">{total}</span> 份资料
+                {loading && data && <span className="ml-2 text-xs">正在按新条件检索…</span>}
               </p>
               {chips.map((c) => (
                 <button
@@ -123,21 +123,26 @@ export function LibraryView() {
               )}
             </div>
 
-            {loading ? (
+            {data?.holdError && (
+              <p role="status" className="mb-3 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                hold 上的规范 · 图集 · 媒体这一路暂时没有取到（{data.holdError}），下面只显示本机资料 —— 不代表没有。
+              </p>
+            )}
+            {loading && !data ? (
               <p className="py-16 text-center text-sm text-muted-foreground">正在加载资料…</p>
             ) : error ? (
               <div className="rounded-lg border border-dashed px-6 py-16 text-center">
                 <p className="font-medium">资料列表没有加载出来</p>
                 <p className="mt-1 text-sm text-muted-foreground">{error}</p>
               </div>
-            ) : results.length ? (
+            ) : total ? (
               <div className="space-y-2">
                 {shown.map((s) => (
                   <SourceCard key={s.id} source={s} active={peekId === s.id} onOpen={openPeek} />
                 ))}
-                {results.length > shown.length && (
+                {total > shown.length && (
                   <p className="py-3 text-center text-xs text-muted-foreground">
-                    只显示前 {shown.length} 份，共 {results.length} 份 —— 加关键词或筛选条件缩小范围
+                    只显示前 {shown.length} 份，共 {total} 份 —— 加关键词或筛选条件缩小范围
                   </p>
                 )}
               </div>

@@ -2,36 +2,31 @@
 
 import { CheckIcon } from "lucide-react"
 
-import { matchSource } from "@/lib/sources/filters"
+import { YEAR_PRESETS } from "@/lib/sources/filters"
 import { SOURCE_KIND_ORDER, SOURCE_KINDS } from "@/lib/sources/kinds"
-import type { SourceFilters, SourceMeta } from "@/lib/sources/types"
+import type { SourceFilters } from "@/lib/sources/types"
+import type { SourceSearch } from "@/hooks/use-sources"
 import { cn } from "@/lib/utils"
-
-const YEAR_PRESETS: { label: string; from?: number; to?: number }[] = [
-  { label: "不限" },
-  { label: "2020 年以后", from: 2020 },
-  { label: "2010–2019", from: 2010, to: 2019 },
-  { label: "2000–2009", from: 2000, to: 2009 },
-  { label: "2000 年以前", to: 1999 },
-]
 
 /**
  * 分面筛选（Faceted search）。每个选项后面的数字 =
  * “保留其他条件、只改这一项时会有多少结果”，让用户点之前就知道会不会“筛没了”。
  */
 export function Facets({
-  sources,
-  regions,
+  counts,
   filters,
   onChange,
 }: {
-  sources: SourceMeta[]
-  regions: string[]
+  /** 服务端算好的分面计数（/api/sources/search）；还没回来时为空，数字显示 0 但不禁用已选项 */
+  counts?: SourceSearch["facets"]
   filters: SourceFilters
   onChange: (f: SourceFilters) => void
 }) {
-  const count = (patch: Partial<SourceFilters>) =>
-    sources.filter((s) => matchSource(s, { ...filters, ...patch })).length
+  // 地区：计数最多的在前；已选的即使当前是 0 也留着（否则取消不了）
+  const regions = Object.entries(counts?.regions ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .map(([r]) => r)
+  for (const r of filters.regions) if (!regions.includes(r)) regions.push(r)
 
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
 
@@ -44,7 +39,7 @@ export function Facets({
             <FacetOption
               key={k}
               checked={filters.kinds.includes(k)}
-              count={count({ kinds: [k] })}
+              count={counts?.kinds[k] ?? 0}
               onClick={() => onChange({ ...filters, kinds: toggle(filters.kinds, k) })}
             >
               <Icon className="size-3.5 text-muted-foreground" />
@@ -59,7 +54,7 @@ export function Facets({
           <FacetOption
             key={r}
             checked={filters.regions.includes(r)}
-            count={count({ regions: [r] })}
+            count={counts?.regions[r] ?? 0}
             onClick={() => onChange({ ...filters, regions: toggle(filters.regions, r) })}
           >
             {r}
@@ -68,14 +63,14 @@ export function Facets({
       </FacetGroup>
 
       <FacetGroup title="年份">
-        {YEAR_PRESETS.map((p) => {
+        {YEAR_PRESETS.map((p, i) => {
           const checked = filters.yearFrom === p.from && filters.yearTo === p.to
           return (
             <FacetOption
               key={p.label}
               radio
               checked={checked}
-              count={count({ yearFrom: p.from, yearTo: p.to })}
+              count={counts?.years[i] ?? 0}
               onClick={() => onChange({ ...filters, yearFrom: p.from, yearTo: p.to })}
             >
               {p.label}

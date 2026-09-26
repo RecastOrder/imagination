@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 
-import type { Source, SourceMeta } from "@/lib/sources/types"
+import { filtersToSearch } from "@/lib/sources/filters"
+import type { Source, SourceFilters, SourceKind, SourceMeta } from "@/lib/sources/types"
 
 /**
  * 资料的前端读取口：资料列表（/api/sources）与单份全文（/api/sources/[id]）。
@@ -37,6 +38,40 @@ export function useSourceList(): { sources: SourceMeta[]; regions: string[]; loa
   }, [])
   const regions = Array.from(new Set(state.sources.map((s) => s.region)))
   return { ...state, regions }
+}
+
+export interface SourceSearch {
+  total: number
+  items: SourceMeta[]
+  facets: { kinds: Partial<Record<SourceKind, number>>; regions: Record<string, number>; years: number[] }
+  /** hold 资料服务那一路出了错（本机资料照常显示）：如实提示，不当成「没有」 */
+  holdError?: string
+}
+
+/**
+ * 资料库检索：条件交给服务端（/api/sources/search），只取回前 100 条和分面计数。
+ * hold 上的规范 · 图集 · 媒体有二十多万条，不能再整张拉到浏览器里筛。
+ */
+export function useSourceSearch(filters: SourceFilters): { data?: SourceSearch; loading: boolean; error?: string } {
+  const key = filtersToSearch(filters)
+  const [state, setState] = useState<{ key: string; data?: SourceSearch; error?: string }>()
+  useEffect(() => {
+    let alive = true
+    fetch(`/api/sources/search${key}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`资料检索失败（${r.status}）`)
+        return (await r.json()) as SourceSearch
+      })
+      .then(
+        (data) => alive && setState({ key, data }),
+        (e: Error) => alive && setState({ key, error: e.message }),
+      )
+    return () => {
+      alive = false
+    }
+  }, [key])
+  const current = state?.key === key ? state : undefined
+  return { data: current?.data ?? state?.data, loading: !current, error: current?.error }
 }
 
 /** 按 id 取资料元信息（标题、编号等），用已缓存的列表，不取正文 —— 引用标签、资料卡片用 */

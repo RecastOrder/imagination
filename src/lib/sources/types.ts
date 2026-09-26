@@ -44,6 +44,12 @@ export interface Source {
   status?: SourceStatus
   /** 原版 PDF 总页数 */
   pages: number
+  /** false = 我们手上这份只有文字、原件还没接进来（hold 资料在接入原件之前）：阅读器不许拿演示页面冒充原版 */
+  hasOriginal?: boolean
+  /** 原文出处网址（媒体报道等） */
+  originUrl?: string
+  /** 版权说明原话（例如「仅供内部研究 · 不得转载」） */
+  rights?: string
   sections: SourceSection[]
 }
 

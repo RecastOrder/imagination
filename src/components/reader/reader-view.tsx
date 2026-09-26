@@ -33,7 +33,9 @@ const ZOOM_STEPS = [0.6, 0.75, 0.9, 1]
  * 切换时保持位置：文本的当前章节 ⇄ 原版的对应页码。
  */
 export function ReaderView({ source }: { source: Source }) {
-  const [view, setView] = useState<View>(SOURCE_KINDS[source.kind].defaultView)
+  // 没有原件的资料（hold 资料在接入原件之前）一律从文本打开：原版视图此刻只有演示页面，不能拿它冒充原件
+  const noOriginal = source.hasOriginal === false
+  const [view, setView] = useState<View>(noOriginal ? "text" : SOURCE_KINDS[source.kind].defaultView)
   const [step, setStep] = useState({ text: 2, original: 2 })
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [quote, setQuote] = useState<string | null>(null)
@@ -123,7 +125,12 @@ export function ReaderView({ source }: { source: Source }) {
             onChange={switchView}
             options={[
               { value: "text", title: "解析后的文字，可调字号、可高亮摘录", label: <><AlignLeftIcon />文本</> },
-              { value: "original", title: "与纸质版一致的原始页面", label: <><FileImageIcon />原版</> },
+              {
+                value: "original",
+                title: noOriginal ? "这份资料的原件还没接入，暂时只有文字" : "与纸质版一致的原始页面",
+                label: <><FileImageIcon />原版</>,
+                disabled: noOriginal,
+              },
             ]}
           />
           <div className="flex items-center gap-0.5">
@@ -181,7 +188,21 @@ export function ReaderView({ source }: { source: Source }) {
                 <article ref={articleRef} className="mx-auto w-full max-w-(--reader-measure) min-w-0">
                   <h1 className="font-serif text-3xl leading-tight font-semibold text-balance">{source.title}</h1>
                   <SourceMeta source={source} className="mt-3 text-sm" />
-                  <p className="mt-6 border-y py-4 text-sm leading-relaxed text-muted-foreground">{source.summary}</p>
+                  {source.summary && <p className="mt-6 border-y py-4 text-sm leading-relaxed text-muted-foreground">{source.summary}</p>}
+                  {(source.rights || source.originUrl || noOriginal) && (
+                    <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+                      {noOriginal && "这份资料目前只有识别出的文字，原件还没接入；数字请以原件为准。"}
+                      {source.rights && <> 版权：{source.rights}</>}
+                      {source.originUrl && (
+                        <>
+                          {" "}
+                          <a href={source.originUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-foreground">
+                            原文出处
+                          </a>
+                        </>
+                      )}
+                    </p>
+                  )}
                   <p className="mt-4 text-xs text-muted-foreground">提示：选中任意文字，可以高亮、存入笔记本或向 AI 提问。</p>
                   <TextView source={source} fontSize={steps[idx]} />
                   <div className="h-32" />

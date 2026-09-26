@@ -16,7 +16,8 @@ export function Segmented<T extends string>({
 }: {
   value: T
   onChange: (v: T) => void
-  options: { value: T; label: React.ReactNode; title?: string }[]
+  /** disabled：这一项此刻不可用（例如资料没有原件），置灰且点不动，title 说明原因 */
+  options: { value: T; label: React.ReactNode; title?: string; disabled?: boolean }[]
   size?: "sm" | "md"
   label: string
   className?: string
@@ -30,9 +31,10 @@ export function Segmented<T extends string>({
           role="radio"
           aria-checked={value === o.value}
           title={o.title}
+          disabled={o.disabled}
           onClick={() => onChange(o.value)}
           className={cn(
-            "inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none [&_svg]:size-3.5",
+            "inline-flex cursor-pointer items-center gap-1.5 rounded-[5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none disabled:cursor-default disabled:opacity-40 disabled:hover:text-muted-foreground [&_svg]:size-3.5",
             size === "sm" ? "h-6 px-2 text-xs" : "h-7 px-2.5 text-[13px]",
             value === o.value && "bg-surface text-foreground shadow-sm",
           )}

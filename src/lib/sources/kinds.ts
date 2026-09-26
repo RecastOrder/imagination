@@ -29,7 +29,7 @@ export const SOURCE_KINDS: Record<
   magazine: { label: "杂志", icon: NewspaperIcon, authority: 3, defaultView: "text" },
   article: { label: "文章", icon: FileTextIcon, authority: 3, defaultView: "text" },
   book: { label: "书籍", icon: BookOpenIcon, authority: 3, defaultView: "text" },
-  report: { label: "报道", icon: ScrollTextIcon, authority: 4, defaultView: "text" },
+  report: { label: "媒体", icon: ScrollTextIcon, authority: 4, defaultView: "text" },
 }
 
 export const AUTHORITY_LABELS: Record<AuthorityLevel, string> = {
