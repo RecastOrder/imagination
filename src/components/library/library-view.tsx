@@ -27,7 +27,7 @@ export function LibraryView() {
   const pathname = usePathname()
   const params = useSearchParams()
   const filters = useMemo(() => parseFilters(params), [params])
-  const { peekId } = usePeek()
+  const { peekId, openPeek } = usePeek()
   const inputRef = useRef<HTMLInputElement>(null)
   const { data, loading, error } = useSourceSearch(filters)
 
@@ -138,7 +138,7 @@ export function LibraryView() {
             ) : total ? (
               <div className="space-y-2">
                 {shown.map((s) => (
-                  <SourceCard key={s.id} source={s} active={peekId === s.id} onOpen={(id) => router.push(`/library/${id}`)} />
+                  <SourceCard key={s.id} source={s} active={peekId === s.id} onOpen={(id) => openPeek(id)} />
                 ))}
                 {total > shown.length && (
                   <p className="py-3 text-center text-xs text-muted-foreground">

@@ -40,7 +40,7 @@ export function AnnotateToolbar({
   issues?: { open: number; active: boolean; onClick: () => void }
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex min-w-0 items-center gap-1">
       <div role="radiogroup" aria-label="标注工具" className="flex rounded-md bg-secondary p-0.5">
         {TOOLS.filter((t) => !tools || tools.includes(t.value)).map(({ value, label, hint, icon: Icon, key }) => (
           <Tooltip key={value}>
@@ -57,7 +57,7 @@ export function AnnotateToolbar({
                 )}
               >
                 <Icon />
-                <span className="hidden xl:inline">{label}</span>
+                <span className="hidden @3xl:inline">{label}</span>
                 {value === "calibrate" && calibrated && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-success" aria-label="已校准" />}
               </button>
             </TooltipTrigger>
@@ -72,12 +72,13 @@ export function AnnotateToolbar({
         aria-pressed={panelOpen}
         onClick={onTogglePanel}
         className={cn(
-          "flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground",
+          "flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 text-xs whitespace-nowrap text-muted-foreground hover:bg-accent hover:text-foreground",
           panelOpen && "bg-accent text-foreground",
         )}
       >
         <MessageSquareTextIcon className="size-3.5" />
-        标注 {count}
+        <span className="hidden @xl:inline">标注</span>
+        <span className="tabular-nums">{count}</span>
       </button>
       {issues && (
         <button
@@ -86,12 +87,13 @@ export function AnnotateToolbar({
           onClick={issues.onClick}
           title="问题：能看这个文件的人都看得到"
           className={cn(
-            "flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground",
+            "flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 text-xs whitespace-nowrap text-muted-foreground hover:bg-accent hover:text-foreground",
             issues.active && "bg-accent text-foreground",
           )}
         >
           <CircleDotIcon className="size-3.5" />
-          问题 {issues.open}
+          <span className="hidden @xl:inline">问题</span>
+          <span className="tabular-nums">{issues.open}</span>
         </button>
       )}
       {note}

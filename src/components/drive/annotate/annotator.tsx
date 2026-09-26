@@ -108,7 +108,7 @@ export function useAnnotator({
         readOnly ? (
           <span className="flex items-center gap-1 text-xs text-muted-foreground" title="你对这个文件是“仅浏览”权限：测量结果只有你自己看得到">
             <EyeIcon className="size-3.5" />
-            <span className="hidden lg:inline">仅浏览：可测量，不能标注</span>
+            <span className="hidden @4xl:inline">仅浏览：可测量，不能标注</span>
           </span>
         ) : undefined
       }
