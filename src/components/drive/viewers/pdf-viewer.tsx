@@ -9,6 +9,8 @@ import {
   MoveHorizontalIcon,
   PlusIcon,
   RotateCwIcon,
+  DownloadIcon,
+  PrinterIcon,
   ScanIcon,
   SearchIcon,
   TextCursorIcon,
@@ -45,7 +47,7 @@ type OutlineItem = { title: string; page: number | null; items: OutlineItem[] }
  * - 目录：PDF 自带的书签；没有就明说没有
  * - 按需渲染：页面滚动到附近才画；中文 cmaps 随应用提供；高清屏按设备像素比渲染
  */
-export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: ViewerProps & { banner?: React.ReactNode }) {
+export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue, download, printable }: ViewerProps & { banner?: React.ReactNode }) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<View>({ mode: "fit" })
@@ -456,6 +458,19 @@ export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: 
         <Button variant="ghost" size="icon-sm" className={cn(tb, textMode && "bg-accent text-foreground")} aria-pressed={textMode} data-text-toggle onClick={() => { setTextMode((v) => !v); setBoxZoom(false) }} aria-label="选文字" title="选文字：可以选中、复制原件里的文字（扫描件没有文字）">
           <TextCursorIcon />
         </Button>
+        {(download || printable) && <span className="mx-1 h-4 w-px bg-border" aria-hidden />}
+        {download && (
+          <Button asChild variant="ghost" size="icon-sm" className={tb}>
+            <a href={download} data-pdf-download aria-label="下载原件" title="下载原件到本机">
+              <DownloadIcon />
+            </a>
+          </Button>
+        )}
+        {printable && (
+          <Button variant="ghost" size="icon-sm" className={tb} data-pdf-print onClick={() => printPdf(blob)} aria-label="打印" title="打印原件（用浏览器的打印对话框）">
+            <PrinterIcon />
+          </Button>
+        )}
         <span className="mx-1 h-4 w-px bg-border" aria-hidden />
         {annot.toolbar}
       </div>
@@ -782,4 +797,26 @@ function BoxZoom({ root, onZoom }: { root: React.RefObject<HTMLDivElement | null
       style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
     />
   )
+}
+
+/** 打印：把原件放进一个看不见的 iframe，交给浏览器自带的 PDF 打印（页面大小、页码范围都在它的对话框里选） */
+function printPdf(blob: Blob) {
+  const url = URL.createObjectURL(blob)
+  const f = document.createElement("iframe")
+  f.style.cssText = "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0"
+  f.src = url
+  f.onload = () => {
+    try {
+      f.contentWindow?.focus()
+      f.contentWindow?.print()
+    } catch {
+      window.open(url, "_blank")
+    }
+  }
+  document.body.appendChild(f)
+  // 打印对话框关了以后再收：一分钟足够，页面还在就不影响
+  setTimeout(() => {
+    f.remove()
+    URL.revokeObjectURL(url)
+  }, 60000)
 }

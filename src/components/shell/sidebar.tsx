@@ -16,6 +16,7 @@ import {
   UsersIcon,
   PanelLeftIcon,
   ScrollTextIcon,
+  DatabaseIcon,
   SearchIcon,
   SquarePenIcon,
   type LucideIcon,
@@ -62,6 +63,7 @@ const PLUGINS: { href: string; label: string; icon: LucideIcon; feature: Feature
 
 const ADMIN_NAV: { href: string; label: string; icon: LucideIcon; adminOnly?: boolean }[] = [
   { href: "/admin/members", label: "成员与权限", icon: UsersIcon, adminOnly: true },
+  { href: "/admin/storage", label: "存储总库", icon: DatabaseIcon, adminOnly: true },
   { href: "/admin/audit", label: "查看记录", icon: ScrollTextIcon, adminOnly: true },
   { href: "/design", label: "设计系统", icon: PaletteIcon },
 ]

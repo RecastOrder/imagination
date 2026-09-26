@@ -4,6 +4,7 @@ import { useEffect, useState, type ComponentType } from "react"
 import dynamic from "next/dynamic"
 
 import { Skeleton } from "@/components/ui/skeleton"
+import { LoadProgress, fetchWithProgress, type Progress } from "./load-progress"
 import { readArchiveEntry } from "@/lib/drive/archive"
 import { formatOf, type ViewerKey } from "@/lib/drive/formats"
 import type { DriveFile } from "@/lib/drive/types"
@@ -41,16 +42,22 @@ export function ViewerHost({
   archiveUrl,
   readOnly,
   focusIssue,
+  download,
+  printable,
 }: {
   file: DriveFile
   archiveUrl?: (archiveId: string) => string | undefined
   /** 仅浏览：查看器不显示标注工具 */
   readOnly?: boolean
   focusIssue?: string | null
+  /** 下载地址 / 能不能打印：有权限才传（见 ViewerProps） */
+  download?: string
+  printable?: boolean
 }) {
   const format = formatOf(file.name)
   const Viewer = REGISTRY[format.viewer]
   const [state, setState] = useState<{ id: string; blob: Blob; src: string } | { id: string; error: string } | null>(null)
+  const [prog, setProg] = useState<Progress & { id: string }>({ id: "", got: 0, total: 0, bps: 0 })
 
   useEffect(() => {
     if (!Viewer) return
@@ -64,9 +71,7 @@ export function ViewerHost({
           if (!url) throw new Error("找不到所在的压缩包")
           blob = await readArchiveEntry(file.zip.archiveId, url, file.zip.path)
         } else {
-          const r = await fetch(file.url!)
-          if (!r.ok) throw new Error(`文件读取失败（${r.status}）`)
-          blob = await r.blob()
+          blob = await fetchWithProgress(file.url!, undefined, (p) => alive && setProg({ ...p, id: file.id }))
         }
         src = URL.createObjectURL(blob)
         if (alive) setState({ id: file.id, blob, src })
@@ -82,7 +87,8 @@ export function ViewerHost({
   }, [file, Viewer, archiveUrl])
 
   if (!Viewer) return <PendingViewer name={file.name} size={file.size} href={file.url} />
-  if (!state || state.id !== file.id) return <Skeleton className="m-8 h-[60vh]" />
+  if (!state || state.id !== file.id)
+    return prog.id === file.id ? <LoadProgress {...prog} label="正在取文件…" /> : <Skeleton className="m-8 h-[60vh]" />
   if ("error" in state) return <p className="p-8 text-center text-sm text-destructive">{state.error}</p>
-  return <Viewer key={file.id} fileId={file.id} name={file.name} blob={state.blob} src={state.src} readOnly={readOnly} focusIssue={focusIssue} />
+  return <Viewer key={file.id} fileId={file.id} name={file.name} blob={state.blob} src={state.src} readOnly={readOnly} focusIssue={focusIssue} download={download} printable={printable} />
 }

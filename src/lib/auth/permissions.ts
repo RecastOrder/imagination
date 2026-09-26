@@ -1,6 +1,7 @@
 import {
   BookMarkedIcon,
   BoxesIcon,
+  DownloadIcon,
   FolderPlusIcon,
   LibraryIcon,
   MessageSquareIcon,
@@ -20,7 +21,7 @@ import type { SourceKind } from "@/lib/sources/types"
  * ⚠️ 界面上的隐藏只是体验，真正的权限判断必须在服务端再做一次。
  */
 
-export type Feature = "chat" | "library" | "notebook" | "upload" | "tool_gh" | "project_create" | "admin"
+export type Feature = "chat" | "library" | "notebook" | "upload" | "tool_gh" | "project_create" | "original_download" | "admin"
 
 export const FEATURES: Record<Feature, { label: string; desc: string; icon: LucideIcon }> = {
   chat: { label: "AI 对话", desc: "在对话中提问、生成回答", icon: MessageSquareIcon },
@@ -30,9 +31,11 @@ export const FEATURES: Record<Feature, { label: string; desc: string; icon: Luci
   tool_gh: { label: "GH 生成器", desc: "生成 Grasshopper 文件", icon: BoxesIcon },
   /** 已定：管理员 + 管理员指定的人可以新建项目（在“成员与权限”里单独打开） */
   project_create: { label: "新建项目", desc: "发起新项目，并指定项目负责人", icon: FolderPlusIcon },
+  /** owner 2026-09-26「原件可以有下载打印的选项，但是需要给权限，暂时不开放给user」⇒ 只在管理员模板里，其他人由管理员单独打开 */
+  original_download: { label: "原件下载与打印", desc: "把资料库里规范、图集的原件下载到本机或打印", icon: DownloadIcon },
   admin: { label: "成员管理", desc: "管理成员、角色和配额", icon: SettingsIcon },
 }
-export const FEATURE_ORDER: Feature[] = ["chat", "library", "notebook", "upload", "tool_gh", "project_create", "admin"]
+export const FEATURE_ORDER: Feature[] = ["chat", "library", "notebook", "upload", "tool_gh", "project_create", "original_download", "admin"]
 
 export type Collection = "standards" | "atlas" | "journals" | "cases"
 
