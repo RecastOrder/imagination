@@ -8,6 +8,7 @@ const HOME: Partial<Record<Feature, string>> = {
   library: "/library",
   notebook: "/notebook",
   upload: "/files",
+  tool_gh: "/plugins/gh",
   admin: "/admin/members",
 }
 
