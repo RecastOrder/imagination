@@ -20,12 +20,14 @@ import { Sidebar, type SidebarVariant } from "./sidebar"
  * 侧栏变体的自动规则（“让位”原则：内容优先）：
  * - 手机（<768）：隐藏，顶部菜单按钮打开抽屉
  * - 平板（768–1024）：图标栏
- * - 桌面：展开；但打开预览面板、或进入自带目录树的页面，且屏宽 <1536 时，自动收成图标栏
+ * - 桌面：展开；但打开预览面板、或进入自带目录树的页面时，宽度不够就自动收成图标栏。
+ *   「够」＝ 屏宽 ≥1920（owner 2026-09-26「点击链接打开右侧抽屉时，如果宽度不够，可以让导航栏自动收回去」；
+ *   原来是 1536 —— 1536–1920 之间的屏上，展开的侧栏 256 + 资料库筛选栏 + 45% 的抽屉把列表挤到 400 像素以下）
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isMd = useMinWidth("md")
   const isLg = useMinWidth("lg")
-  const is2xl = useMinWidth("2xl", false)
+  const isWide = useMinWidth("wide", false)
   // 预览面板是否打开：由一个小组件单独读取网址参数，
   // 避免整个外壳因为读网址参数而放弃服务端渲染（否则首屏是空白）
   const [peekOpen, setPeekOpen] = useState(false)
@@ -49,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // 手机上“显示 / 隐藏侧栏”交给 CSS 媒体查询决定（服务端渲染时就正确，不会先闪一下桌面布局）；
   // JS 只负责桌面上“展开 / 图标栏”的选择
-  const variant: SidebarVariant = !isLg ? "rail" : userCollapsed || ((peekOpen || hasOwnTree) && !is2xl) ? "rail" : "expanded"
+  const variant: SidebarVariant = !isLg ? "rail" : userCollapsed || ((peekOpen || hasOwnTree) && !isWide) ? "rail" : "expanded"
 
   return (
     <TooltipProvider>

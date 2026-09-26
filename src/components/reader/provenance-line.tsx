@@ -13,6 +13,12 @@ export function ProvenanceLine({ source, className }: { source: Pick<Source, "pr
       {label}
     </a>
   )
+  if (p.unverified)
+    return (
+      <p data-provenance={p.lane} data-unverified className={cn("text-xs leading-relaxed text-warning", className)}>
+        {p.unverified} · 文件在 hold 的 <span className="font-mono">{p.lane}</span>
+      </p>
+    )
   return (
     <p data-provenance={p.lane} className={cn("text-xs leading-relaxed text-muted-foreground", className)}>
       出处：抓取车道 <span className="font-mono">{p.lane}</span>

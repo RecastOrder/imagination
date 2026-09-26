@@ -57,7 +57,9 @@ export interface Source {
    * 没有这一项的资料不上对外页面（资料库、阅读页）。url = 取回文件的网址；page = 它所在的页面 / 公告页；
    * ref = 站内编号（台账没记网址时，不拼网址）
    */
-  provenance?: { lane: string; url?: string; page?: string; at?: string; ref?: string }
+  provenance?: { lane: string; url?: string; page?: string; at?: string; ref?: string; unverified?: string }
+  /** 被打开的次数（hold 记的，排序用；owner 2026-09-26「搜索次数多的多往前面排」） */
+  opens?: number
   /** 原文里的图（按出现顺序）：local = hold 上已经取回了这张图；没取回的只给原网址 */
   images?: { n: number; url: string; local: boolean }[]
   sections: SourceSection[]

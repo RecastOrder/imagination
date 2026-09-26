@@ -2,8 +2,8 @@
 
 import { useSyncExternalStore } from "react"
 
-/** 断点与 Tailwind 保持一致：md 768 / lg 1024 / xl 1280 / 2xl 1536 */
-export const BREAKPOINTS = { md: 768, lg: 1024, xl: 1280, "2xl": 1536 } as const
+/** 断点与 Tailwind 保持一致：md 768 / lg 1024 / xl 1280 / 2xl 1536；wide 1920 只给 JS 用（外壳判断「开了抽屉宽度还够不够」） */
+export const BREAKPOINTS = { md: 768, lg: 1024, xl: 1280, "2xl": 1536, wide: 1920 } as const
 
 export function useMediaQuery(query: string, serverValue = false): boolean {
   return useSyncExternalStore(
