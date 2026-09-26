@@ -33,6 +33,16 @@ export function HoldFilesView() {
   const path = params.get("path") || ROOT
   // asked = 这一次请求的路径；hold 回的 path 是解析过软链的真实路径，可能和网址里的不同，不能拿它判「读回来没有」
   const [data, setData] = useState<{ asked: string; path: string; entries: Entry[]; total: number; error?: string }>()
+  const [more, setMore] = useState(false)
+  // 一页 500 项；大文件夹（比如十万张卡片）点「再显示 500 项」往下翻，不会有进不去的项
+  const loadMore = async () => {
+    if (!data || more) return
+    setMore(true)
+    const r = await fetch(`/api/admin/hold-fs/list?${new URLSearchParams({ path, offset: String(data.entries.length) })}`).catch(() => null)
+    const body = r?.ok ? await r.json().catch(() => null) : null
+    setMore(false)
+    if (body?.entries && data.asked === path) setData({ ...data, entries: [...data.entries, ...body.entries] })
+  }
 
   useEffect(() => {
     let alive = true
@@ -116,7 +126,7 @@ export function HoldFilesView() {
         ) : (
           <>
             <p className="mt-4 text-xs text-muted-foreground tabular-nums">
-              共 {data.total} 项{data.total > data.entries.length && `，只显示前 ${data.entries.length} 项`}
+              共 {data.total} 项{data.total > data.entries.length && `，已显示 ${data.entries.length} 项`}
             </p>
             {data.entries.length === 0 ? (
               <p className="py-16 text-center text-sm text-muted-foreground">这个文件夹是空的</p>
@@ -130,6 +140,13 @@ export function HoldFilesView() {
                   ),
                 )}
               </ul>
+            )}
+            {data.total > data.entries.length && (
+              <div className="mt-3 text-center">
+                <Button variant="outline" size="sm" disabled={more} onClick={loadMore}>
+                  {more ? "正在读取…" : `再显示 ${Math.min(500, data.total - data.entries.length)} 项`}
+                </Button>
+              </div>
             )}
           </>
         )}
