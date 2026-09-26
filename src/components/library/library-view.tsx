@@ -48,7 +48,7 @@ export function LibraryView() {
   const chips = filterChips(filters)
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="@container flex h-full flex-col">
       <header className="border-b bg-background px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-5xl items-center gap-2">
           <h1 className="mr-2 hidden text-base font-semibold sm:block">资料库</h1>
@@ -73,7 +73,7 @@ export function LibraryView() {
           </form>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" className="h-10 lg:hidden">
+              <Button variant="outline" className="h-10 @4xl:hidden">
                 <SlidersHorizontalIcon />
                 筛选
                 {chips.length > 0 && <span className="text-primary tabular-nums">{chips.length}</span>}
@@ -94,7 +94,8 @@ export function LibraryView() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-5xl gap-8 px-4 py-6 sm:px-6">
-          <aside className="hidden w-52 shrink-0 lg:block" aria-label="筛选">
+          {/* 筛选栏按资料库自己的宽度显示（容器查询）：右侧抽屉一开、列表区变窄，筛选栏就收成顶上的「筛选」按钮（owner 2026-09-26） */}
+          <aside className="hidden w-52 shrink-0 @4xl:block" aria-label="筛选">
             <Facets counts={data?.facets} filters={filters} onChange={setFilters} />
           </aside>
 

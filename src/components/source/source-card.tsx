@@ -53,6 +53,11 @@ export function SourceCard({
           <span className={cn("truncate font-medium", density === "compact" ? "text-sm" : "text-[15px]")}>
             {source.title}
           </span>
+          {!!source.opens && (
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums" title="被打开的次数：资料库按它从多到少排">
+              打开 {source.opens} 次
+            </span>
+          )}
         </span>
         <SourceMeta source={source} className="mt-0.5" />
         {density === "comfortable" && (

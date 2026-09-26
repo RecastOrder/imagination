@@ -19,10 +19,10 @@ export function holdEnabled() {
   return Boolean(process.env.HOLD_LIB_URL && process.env.HOLD_LIB_TOKEN)
 }
 
-async function call(path: string, timeoutMs = 8000): Promise<Response> {
+async function call(path: string, timeoutMs = 8000, extra: Record<string, string> = {}): Promise<Response> {
   if (!holdEnabled()) throw new Error("hold 资料服务没有配置")
   return fetch(`${process.env.HOLD_LIB_URL}${path}`, {
-    headers: { authorization: `Bearer ${process.env.HOLD_LIB_TOKEN}` },
+    headers: { authorization: `Bearer ${process.env.HOLD_LIB_TOKEN}`, ...extra },
     cache: "no-store",
     signal: AbortSignal.timeout(timeoutMs),
   })
@@ -73,7 +73,9 @@ export const holdGet = cache(holdGetUncached)
 async function holdGetUncached(id: string): Promise<Source | undefined> {
   if (!isHoldId(id) || !holdEnabled()) return undefined
   try {
-    const r = await call(`/v1/source/${id}`, 15000)
+    // 打开次数（资料库按它排序）：只有线上服务配了 HOLD_COUNT_OPENS=1 才让 hold 记一次 ——
+    // 本机测试、探针不配，就不会把我们自己的实测算成「有人打开」（发起方自报）。holdGet 有同请求去重，一次打开只记一次
+    const r = await call(`/v1/source/${id}`, 15000, process.env.HOLD_COUNT_OPENS === "1" ? { "x-count-open": "1" } : {})
     return r.ok ? ((await r.json()) as Source) : undefined
   } catch {
     return undefined
