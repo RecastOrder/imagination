@@ -1,0 +1,29 @@
+import { NextResponse } from "next/server"
+
+import { cairnGh, relayJson } from "@/lib/server/cairn-gh"
+import { getCurrentUser } from "@/lib/server/current-user"
+
+/** 我的 Grasshopper 生成记录（最近 30 单；管理员看全部） */
+export async function GET() {
+  const user = await getCurrentUser()
+  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 })
+  if (!user.permissions.features.tool_gh.on) return NextResponse.json({ error: "你没有 GH 生成器的权限，请联系管理员" }, { status: 403 })
+  const r = await cairnGh("/requests", user.email)
+  return relayJson(r)
+}
+
+/** 交一单：一段中文需求描述 */
+export async function POST(req: Request) {
+  const user = await getCurrentUser()
+  if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 })
+  if (!user.permissions.features.tool_gh.on) return NextResponse.json({ error: "你没有 GH 生成器的权限，请联系管理员" }, { status: 403 })
+  const body = await req.json().catch(() => ({}))
+  const text = typeof body?.text === "string" ? body.text.trim() : ""
+  if (!text) return NextResponse.json({ error: "请先写下需求" }, { status: 400 })
+  const r = await cairnGh("/requests", user.email, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ text }),
+  })
+  return relayJson(r)
+}

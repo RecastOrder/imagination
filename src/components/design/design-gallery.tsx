@@ -17,6 +17,7 @@ import { FiltersBlock } from "@/components/blocks/filters-block"
 import { IdeaBlock } from "@/components/blocks/idea-block"
 import { NoticeBlock } from "@/components/blocks/notice-block"
 import { ModeSwitch } from "@/components/chat/mode-switch"
+import { GhRequestItem, type GhRequest } from "@/components/projects/gh-generator"
 import { AnnotationLayer } from "@/components/drive/annotate/annotation-layer"
 import { IssueLayer } from "@/components/drive/annotate/issue-layer"
 import { IssuesTab } from "@/components/projects/issues-tab"
@@ -436,6 +437,22 @@ export function DesignGallery() {
         </div>
       </Section>
 
+      <Section
+        id="gh"
+        title="13. Grasshopper 生成器：一单的四种状态"
+        note="交单后先排队，舰队上的 Rhino 一次只跑一单；完成后两张图直接显示、.gh/.3dm 下载，没有成功时写出原因。排队和生成中每 10 秒自动刷新。"
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          {GH_SAMPLES.map((r) => (
+            <State key={r.id} label={r.status}>
+              <ul>
+                <GhRequestItem r={r} fileUrl={() => GH_PLACEHOLDER} />
+              </ul>
+            </State>
+          ))}
+        </div>
+      </Section>
+
       <p className="flex items-center gap-1 text-sm text-muted-foreground">
         设计决策记录见仓库 <code className="font-mono">docs/design-journal/</code>
         <ArrowRightIcon className="size-3.5" />
@@ -543,3 +560,30 @@ function State({ label, children }: { label: string; children: React.ReactNode }
     </div>
   )
 }
+
+const GH_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='9'/%3E"
+const ghBase: GhRequest = {
+  id: "ghr-20260926T120000-a1b2c3",
+  text: "一排竖向遮阳百叶，20 片，间距 600，高 3000，截面 50×200，沿一条曲线排布",
+  status: "pending",
+  error: null,
+  files: [],
+  assumptions: [],
+  model_confirmed: null,
+  created_at: "2026-09-26T12:00:00+0800",
+  finished_at: null,
+}
+const GH_SAMPLES: GhRequest[] = [
+  ghBase,
+  { ...ghBase, id: "ghr-20260926T120000-a1b2c4", status: "claimed" },
+  {
+    ...ghBase,
+    id: "ghr-20260926T120000-a1b2c5",
+    status: "done",
+    finished_at: "2026-09-26T12:07:00+0800",
+    files: ["ghr-20260926T120000-a1b2c5-canvas.png", "ghr-20260926T120000-a1b2c5-persp.png", "ghr-20260926T120000-a1b2c5.3dm", "ghr-20260926T120000-a1b2c5.gh"],
+    assumptions: ["曲线取为 XY 平面上的一段圆弧", "百叶朝向沿曲线法向"],
+    model_confirmed: true,
+  },
+  { ...ghBase, id: "ghr-20260926T120000-a1b2c6", status: "failed", finished_at: "2026-09-26T12:09:00+0800", error: "生成失败（build）：找不到名为 Divide Curve 的电池" },
+]

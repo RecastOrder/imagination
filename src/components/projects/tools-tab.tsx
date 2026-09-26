@@ -1,7 +1,8 @@
-import { BoxesIcon, CloudSunIcon, SunIcon, WindIcon, type LucideIcon } from "lucide-react"
+import { CloudSunIcon, SunIcon, WindIcon, type LucideIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import type { Project } from "@/lib/projects/types"
+import { GhGenerator } from "./gh-generator"
 
 interface Tool {
   name: string
@@ -20,14 +21,6 @@ export function ToolsTab({ project }: { project: Project }) {
   const loc = project.location
   const where = loc.lat ? `${loc.city}${loc.district}（${loc.lat}°N, ${loc.lng}°E）` : `${loc.city}${loc.district}`
   const tools: Tool[] = [
-    {
-      name: "Grasshopper 生成器",
-      icon: BoxesIcon,
-      status: "ready",
-      desc: "已有的工具，待接入平台：在对话里描述需求，生成 .gh 文件",
-      inputs: ["参数（由你描述或填写）"],
-      output: "生成的 .gh 文件 → 本项目 02 设计过程",
-    },
     {
       name: "日照分析",
       icon: SunIcon,
@@ -60,6 +53,7 @@ export function ToolsTab({ project }: { project: Project }) {
         工具会自动带入本项目的位置和模型，结果保存回项目文件夹。分析报告只提供数据，是否满足要求由本人判断。
       </p>
       <div className="grid gap-3 md:grid-cols-2">
+        <GhGenerator />
         {tools.map(({ name, icon: Icon, status, desc, inputs, output }) => (
           <div key={name} className="rounded-xl border bg-surface p-5">
             <div className="flex items-center gap-3">
