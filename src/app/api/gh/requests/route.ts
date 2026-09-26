@@ -8,7 +8,8 @@ export async function GET() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: "未登录" }, { status: 401 })
   if (!user.permissions.features.tool_gh.on) return NextResponse.json({ error: "你没有 GH 生成器的权限，请联系管理员" }, { status: 403 })
-  const r = await cairnGh("/requests", user.email)
+  // 对比视角（管理员以普通成员身份看）：只看本人的单，和普通成员看到的一样
+  const r = await cairnGh(`/requests${user.viewingAsMember ? "?scope=mine" : ""}`, user.email)
   return relayJson(r)
 }
 
