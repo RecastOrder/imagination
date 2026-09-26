@@ -48,6 +48,9 @@ export interface SourceSearch {
     countries: Record<string, number>
     subregions: Record<string, Record<string, number>>
     series: Record<string, number>
+    stdTypes: Record<string, number>
+    atlasDisc: Record<string, number>
+    atlasSrc: Record<string, number>
     years: number[]
   }
   /** hold 资料服务那一路出了错（本机资料照常显示）：如实提示，不当成「没有」 */

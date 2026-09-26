@@ -36,6 +36,10 @@ export interface FacetCounts {
   subregions: Record<string, Record<string, number>>
   /** 杂志的刊名 → 期数 */
   series: Record<string, number>
+  /** 规范类型 · 图集专业与专题 · 图集来源 → 条数（spec 107） */
+  stdTypes: Record<string, number>
+  atlasDisc: Record<string, number>
+  atlasSrc: Record<string, number>
   /** 与 YEAR_PRESETS 一一对应 */
   years: number[]
 }
@@ -54,6 +58,9 @@ export async function holdSearch(f: SourceFilters, limit: number): Promise<HoldS
   if (f.kinds.length) p.set("kinds", f.kinds.join(","))
   if (f.regions.length) p.set("regions", f.regions.join(","))
   if (f.series?.length) p.set("series", f.series.join(","))
+  if (f.stdTypes?.length) p.set("stype", f.stdTypes.join(","))
+  if (f.atlasDisc?.length) p.set("adisc", f.atlasDisc.join(","))
+  if (f.atlasSrc?.length) p.set("asrc", f.atlasSrc.join(","))
   if (f.yearFrom) p.set("from", String(f.yearFrom))
   if (f.yearTo) p.set("to", String(f.yearTo))
   p.set("limit", String(limit))

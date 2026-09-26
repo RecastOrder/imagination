@@ -20,6 +20,9 @@ export function parseFilters(params: Params): SourceFilters {
     kinds: getAll(params, "kind").filter((k): k is SourceKind => k in SOURCE_KINDS),
     regions: getAll(params, "region"),
     series: getAll(params, "series"),
+    stdTypes: getAll(params, "stype"),
+    atlasDisc: getAll(params, "adisc"),
+    atlasSrc: getAll(params, "asrc"),
     yearFrom: num("from"),
     yearTo: num("to"),
   }
@@ -31,6 +34,9 @@ export function filtersToSearch(f: SourceFilters): string {
   if (f.kinds.length) p.set("kind", f.kinds.join(","))
   if (f.regions.length) p.set("region", f.regions.join(","))
   if (f.series?.length) p.set("series", f.series.join(","))
+  if (f.stdTypes?.length) p.set("stype", f.stdTypes.join(","))
+  if (f.atlasDisc?.length) p.set("adisc", f.atlasDisc.join(","))
+  if (f.atlasSrc?.length) p.set("asrc", f.atlasSrc.join(","))
   if (f.yearFrom) p.set("from", String(f.yearFrom))
   if (f.yearTo) p.set("to", String(f.yearTo))
   const s = p.toString()
@@ -58,6 +64,9 @@ export function facetCounts(list: SourceMeta[], f: SourceFilters) {
   const countries: Record<string, number> = {}
   const subregions: Record<string, Record<string, number>> = {}
   const series: Record<string, number> = {}
+  const stdTypes: Record<string, number> = {}
+  const atlasDisc: Record<string, number> = {}
+  const atlasSrc: Record<string, number> = {}
   const years = YEAR_PRESETS.map(() => 0)
   for (const s of list) {
     if (matchSource(s, { ...f, kinds: [] })) kinds[s.kind] = (kinds[s.kind] ?? 0) + 1
@@ -68,17 +77,23 @@ export function facetCounts(list: SourceMeta[], f: SourceFilters) {
       if (r.includes(REGION_SEP)) (subregions[c] ??= {})[r] = (subregions[c][r] ?? 0) + 1
     }
     if (s.kind === "magazine" && s.publisher && matchSource(s, { ...f, series: [] })) series[s.publisher] = (series[s.publisher] ?? 0) + 1
+    if (s.std_type && matchSource(s, { ...f, stdTypes: [] })) stdTypes[s.std_type] = (stdTypes[s.std_type] ?? 0) + 1
+    if (matchSource(s, { ...f, atlasDisc: [] })) for (const x of s.atlas_disc ?? []) atlasDisc[x] = (atlasDisc[x] ?? 0) + 1
+    if (matchSource(s, { ...f, atlasSrc: [] })) for (const x of s.atlas_src ?? []) atlasSrc[x] = (atlasSrc[x] ?? 0) + 1
     YEAR_PRESETS.forEach((y, i) => {
       if (matchSource(s, { ...f, yearFrom: y.from, yearTo: y.to })) years[i]++
     })
   }
-  return { kinds, countries, subregions, series, years }
+  return { kinds, countries, subregions, series, stdTypes, atlasDisc, atlasSrc, years }
 }
 
 export function matchSource(s: SourceMeta, f: SourceFilters): boolean {
   if (f.kinds.length && !f.kinds.includes(s.kind)) return false
   if (f.regions.length && !f.regions.some((r) => inRegion(localRegion(s.region), r))) return false
   if (f.series?.length && !(s.kind === "magazine" && s.publisher && f.series.includes(s.publisher))) return false
+  if (f.stdTypes?.length && !(s.std_type && f.stdTypes.includes(s.std_type))) return false
+  if (f.atlasDisc?.length && !(s.atlas_disc ?? []).some((x) => f.atlasDisc!.includes(x))) return false
+  if (f.atlasSrc?.length && !(s.atlas_src ?? []).some((x) => f.atlasSrc!.includes(x))) return false
   if (f.yearFrom && s.year < f.yearFrom) return false
   if (f.yearTo && s.year > f.yearTo) return false
   if (f.q) {
@@ -111,6 +126,13 @@ export function filterChips(f: SourceFilters): { key: string; label: string; rem
       label: `刊名：${x}`,
       remove: () => ({ ...f, series: (f.series ?? []).filter((y) => y !== x) }),
     })
+  const listChips = (key: "stdTypes" | "atlasDisc" | "atlasSrc", name: string) => {
+    for (const x of f[key] ?? [])
+      chips.push({ key: `${key}-${x}`, label: `${name}：${x}`, remove: () => ({ ...f, [key]: (f[key] ?? []).filter((y) => y !== x) }) })
+  }
+  listChips("stdTypes", "规范类型")
+  listChips("atlasSrc", "图集来源")
+  listChips("atlasDisc", "图集专业")
   if (f.yearFrom || f.yearTo)
     chips.push({
       key: "year",
