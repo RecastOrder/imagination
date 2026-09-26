@@ -9,13 +9,18 @@ import { AddToProject } from "@/components/projects/add-to-project"
 import { useSource } from "@/hooks/use-sources"
 import { SourceKindBadge } from "./source-kind-badge"
 import { SourceMeta } from "./source-meta"
+import { HoldOriginalView } from "@/components/reader/hold-original-view"
+import { ProvenanceLine } from "@/components/reader/provenance-line"
+import { TextView } from "@/components/reader/text-view"
 
 /**
  * 预览面板的“内容”。它不关心自己被放在分栏里还是抽屉里——
  * 容器由 PeekLayout 根据屏幕宽度决定。
  *
  * 三级递进：引用标签（看到） → 预览面板（看清） → 阅读模式（读透）
- * 预览只给“判断是不是我要的”所需的信息：元信息、摘要、目录、命中段落。
+ * 两种打开方式（owner 2026-09-26「点击资料库文件连接的时候，右侧的抽屉直接显示对应源文件。」）：
+ * - 从资料库点开（没有 sectionId）⇒ 抽屉里直接是源文件：有原件放 PDF 原件，媒体放原文和图（按原顺序）
+ * - 从对话引用点开（带 sectionId）⇒ 先给命中段落与目录，方便判断是不是要的那一条
  */
 export function SourcePeek({
   sourceId,
@@ -64,7 +69,7 @@ export function SourcePeek({
           <Button asChild size="sm">
             <Link href={`/library/${source.id}${focus ? `#${focus.id}` : ""}`}>
               <BookOpenTextIcon />
-              阅读模式
+              全屏阅读
             </Link>
           </Button>
           <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="关闭预览">
@@ -73,6 +78,27 @@ export function SourcePeek({
         </div>
       </header>
 
+      {!sectionId && (
+        <div data-peek-source className="flex min-h-0 flex-1 flex-col">
+          <div className="border-b px-4 py-2">
+            <p className="truncate text-sm font-medium" title={source.title}>{source.title}</p>
+            <ProvenanceLine source={source} />
+          </div>
+          {source.hasOriginal ? (
+            <div className="min-h-0 flex-1">
+              <HoldOriginalView source={source} className="h-full" />
+            </div>
+          ) : (
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-10">
+              {source.hasOriginal === false && source.kind !== "report" && (
+                <p className="mb-3 text-xs text-muted-foreground">这份资料目前只有识别出的文字，原件还没接入；数字请以原件为准。</p>
+              )}
+              <TextView source={source} fontSize={16} />
+            </div>
+          )}
+        </div>
+      )}
+      {sectionId && (
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="px-6 pt-6 pb-10">
           <h2 className="text-xl leading-snug font-semibold text-balance">{source.title}</h2>
@@ -107,6 +133,7 @@ export function SourcePeek({
           </ol>
         </div>
       </div>
+      )}
     </div>
   )
 }

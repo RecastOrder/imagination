@@ -28,7 +28,8 @@ export function ImageViewer({ fileId, name, src, readOnly, focusIssue }: ViewerP
   }, [])
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    // @container：工具栏标签按查看器自身宽度显示（同 pdf-viewer）
+    <div className="@container flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-1.5">
         <Segmented
           label="显示方式"

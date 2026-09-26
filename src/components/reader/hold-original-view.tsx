@@ -16,7 +16,8 @@ const PdfViewer = dynamic(() => import("@/components/drive/viewers/pdf-viewer").
  * 原版视图（hold 上的规范 / 图集）：取回原件 PDF，交给文件浏览里同一个 PDF.js 查看器渲染。
  * 只读：资料库的原件不能在这里批注成「问题」，只能看、量。
  */
-export function HoldOriginalView({ source }: { source: Source }) {
+/** className：容器高度。阅读页默认占满视口；右侧抽屉里传 h-full 跟着抽屉走 */
+export function HoldOriginalView({ source, className = "h-[calc(100dvh-8rem)]" }: { source: Source; className?: string }) {
   const [state, setState] = useState<{ blob?: Blob; error?: string }>({})
   useEffect(() => {
     let alive = true
@@ -37,7 +38,7 @@ export function HoldOriginalView({ source }: { source: Source }) {
   if (state.error) return <p className="py-16 text-center text-sm text-muted-foreground">{state.error}</p>
   if (!state.blob) return <p className="py-16 text-center text-sm text-muted-foreground">正在取原件…（大的规范有几十 MB，要等一会儿）</p>
   return (
-    <div data-hold-original className="h-[calc(100dvh-8rem)]">
+    <div data-hold-original className={className}>
       <PdfViewer name={`${source.code ?? source.title}.pdf`} blob={state.blob} src="" fileId={`library:${source.id}`} readOnly />
     </div>
   )

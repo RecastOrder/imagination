@@ -86,7 +86,8 @@ export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: 
     )
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    // @container：工具栏的文字标签按查看器自己的宽度显示（放进右侧抽屉时窗口宽、查看器窄）
+    <div className="@container flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-1 border-b px-4 py-1.5">
         <Button variant="ghost" size="icon-sm" disabled={zoom === 0} onClick={() => setZoom((z) => z - 1)} aria-label="缩小">
           <MinusIcon />
@@ -98,7 +99,7 @@ export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: 
         <span className="mx-2 h-4 w-px bg-border" aria-hidden />
         {annot.toolbar}
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-          第 {page} / {doc.numPages} 页
+          <span className="whitespace-nowrap">第 {page} / {doc.numPages} 页</span>
         </span>
       </div>
       {banner}

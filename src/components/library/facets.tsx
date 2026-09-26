@@ -213,7 +213,7 @@ function FacetOption({
       >
         {checked && (radio ? <span className="size-1.5 rounded-full bg-current" /> : <CheckIcon className="size-3" strokeWidth={3} />)}
       </span>
-      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-left"><span className="truncate">{children}</span></span>
+      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-left"><span className="truncate [&_svg]:mr-1.5 [&_svg]:inline [&_svg]:align-[-2px]">{children}</span></span>
       <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{count}</span>
     </button>
   )
