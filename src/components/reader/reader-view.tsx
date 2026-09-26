@@ -15,6 +15,7 @@ import type { Source } from "@/lib/sources/types"
 import { cn } from "@/lib/utils"
 import { OriginalView } from "./original-view"
 import { HoldOriginalView } from "./hold-original-view"
+import { ProvenanceLine } from "./provenance-line"
 import { AssistantLauncher, ReaderAssistant } from "./reader-assistant"
 import { SelectionToolbar } from "./selection-toolbar"
 import { TextView } from "./text-view"
@@ -36,7 +37,9 @@ const ZOOM_STEPS = [0.6, 0.75, 0.9, 1]
 export function ReaderView({ source }: { source: Source }) {
   // 没有原件的资料（hold 资料在接入原件之前）一律从文本打开：原版视图此刻只有演示页面，不能拿它冒充原件
   const noOriginal = source.hasOriginal === false
-  const [view, setView] = useState<View>(noOriginal ? "text" : SOURCE_KINDS[source.kind].defaultView)
+  // owner 2026-09-26「点击了资料的连接就该可以阅读原件。而不是简单的目录」：有原件就默认原件；
+  // 没有原件的（媒体报道：原文 = 正文 + 原图）从文本打开
+  const [view, setView] = useState<View>(source.hasOriginal ? "original" : noOriginal ? "text" : SOURCE_KINDS[source.kind].defaultView)
   const [step, setStep] = useState({ text: 2, original: 2 })
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [quote, setQuote] = useState<string | null>(null)
@@ -204,12 +207,14 @@ export function ReaderView({ source }: { source: Source }) {
                       )}
                     </p>
                   )}
+                  <ProvenanceLine source={source} className="mt-2" />
                   <p className="mt-4 text-xs text-muted-foreground">提示：选中任意文字，可以高亮、存入笔记本或向 AI 提问。</p>
                   <TextView source={source} fontSize={steps[idx]} />
                   <div className="h-32" />
                 </article>
               ) : (
                 <div className="mx-auto w-full max-w-3xl min-w-0">
+                  <ProvenanceLine source={source} className="mb-3" />
                   {source.hasOriginal ? <HoldOriginalView source={source} /> : <OriginalView source={source} zoom={steps[idx]} />}
                   <div className="h-32" />
                 </div>

@@ -34,6 +34,7 @@ import type { MemberRole } from "@/lib/projects/types"
 import type { ChatMode } from "@/lib/chat/modes"
 import { Composer } from "@/components/chat/composer"
 import { SourceCard } from "@/components/source/source-card"
+import { ProvenanceLine } from "@/components/reader/provenance-line"
 import { getSource } from "@/lib/sources/mock"
 
 /**
@@ -450,6 +451,24 @@ export function DesignGallery() {
               </ul>
             </State>
           ))}
+        </div>
+      </Section>
+
+      <Section
+        id="provenance"
+        title="14. 出处一行：对外只放有出处的资料（R154）"
+        note="阅读页正文和原版上方各一行：哪条抓取车道 · 何时取回 · 原网址。车道名是标识符，原样不截断；台账没记时刻就写「台账没记」，不猜。说不出车道和网址的资料根本不进资料库，所以没有「无出处」这一态。"
+      >
+        <div className="grid gap-3">
+          <State label="有文件原址和所在页面（省厅车道）">
+            <ProvenanceLine source={{ provenance: { lane: "anhui-dohurd-att", at: "2026-08-31T20:16:20+0800", page: "https://dohurd.ah.gov.cn/public/6991/53904241.html", url: "https://dohurd.ah.gov.cn/group4/M00/00/93/example.pdf" } }} />
+          </State>
+          <State label="只有原网址（地标备案）">
+            <ProvenanceLine source={{ provenance: { lane: "dbba-fulltext", at: "2026-09-03T00:32:53Z", url: "https://dbba.sacinfo.org.cn/portal/download/example" } }} />
+          </State>
+          <State label="台账没记时刻（杂志镜像）">
+            <ProvenanceLine source={{ provenance: { lane: "usmodernist-mirror", url: "https://www.usmodernist.org/AA/AA-1967-07-08.pdf" } }} />
+          </State>
         </div>
       </Section>
 

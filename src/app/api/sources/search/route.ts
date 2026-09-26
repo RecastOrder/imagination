@@ -32,7 +32,10 @@ export async function GET(req: Request) {
       total += h.total
       items.push(...h.items.slice(0, Math.max(0, SHOWN - items.length)))
       for (const [k, n] of Object.entries(h.facets.kinds)) facets.kinds[k as keyof FacetCounts["kinds"]] = (facets.kinds[k as keyof FacetCounts["kinds"]] ?? 0) + (n ?? 0)
-      for (const [r, n] of Object.entries(h.facets.regions)) facets.regions[r] = (facets.regions[r] ?? 0) + n
+      for (const [c, n] of Object.entries(h.facets.countries)) facets.countries[c] = (facets.countries[c] ?? 0) + n
+      for (const [c, subs] of Object.entries(h.facets.subregions))
+        for (const [r, n] of Object.entries(subs)) (facets.subregions[c] ??= {})[r] = (facets.subregions[c][r] ?? 0) + n
+      for (const [x, n] of Object.entries(h.facets.series)) facets.series[x] = (facets.series[x] ?? 0) + n
       h.facets.years.forEach((n, i) => (facets.years[i] = (facets.years[i] ?? 0) + n))
     }
   }

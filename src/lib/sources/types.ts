@@ -52,6 +52,12 @@ export interface Source {
   originUrl?: string
   /** 版权说明原话（例如「仅供内部研究 · 不得转载」） */
   rights?: string
+  /**
+   * 出处（R154：对外只放有出处的资料）：哪条抓取车道 · 哪一刻 · 从哪个网址取回。
+   * 没有这一项的资料不上对外页面（资料库、阅读页）。url = 取回文件的网址；page = 它所在的页面 / 公告页；
+   * ref = 站内编号（台账没记网址时，不拼网址）
+   */
+  provenance?: { lane: string; url?: string; page?: string; at?: string; ref?: string }
   /** 原文里的图（按出现顺序）：local = hold 上已经取回了这张图；没取回的只给原网址 */
   images?: { n: number; url: string; local: boolean }[]
   sections: SourceSection[]
@@ -67,7 +73,10 @@ export const isOutdated = (s?: { status?: SourceStatus }) => s?.status === "supe
 export interface SourceFilters {
   q?: string
   kinds: SourceKind[]
+  /** 地区：「国家」或「国家 · 地区」；选「中国」就包含「中国 · 上海市」等全部下级 */
   regions: string[]
+  /** 杂志的刊名（类别）；为空 = 不限 */
+  series?: string[]
   yearFrom?: number
   yearTo?: number
 }

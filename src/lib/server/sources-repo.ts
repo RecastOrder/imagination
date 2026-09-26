@@ -116,6 +116,14 @@ function cardToSource(id: string, text: string): Source | undefined {
   }
 }
 
+/**
+ * 出处闸（R154，owner 2026-09-26「那么之前没有出处的资料不能被对外的页面看到」）：
+ * 说不出「哪条抓取车道 · 哪一刻 · 哪个网址」的资料，不进列表、打不开。盘上照留，不删。
+ * 本机 cairn-kb 资料卡的 `origin` 栏是我们自己写的来处描述（如「Cairn vault-public / …」），不是取件记录 ⇒ 不算出处。
+ */
+// 口径与 hold 那边（holdlib.load_provenance 的 complete）一致：车道＋网址是硬条件；只有站内编号不算（R110：不拼网址）
+export const hasProvenance = (s: Pick<Source, "provenance">) => Boolean(s.provenance?.lane && (s.provenance.url || s.provenance.page))
+
 function cairnKbRepo(dir: string): SourceRepository {
   // 内存里只放元信息（几 MB）；正文 400 MB 级，打开时再从盘上读 —— 容器有内存上限
   let cache: { key: string; metas: SourceMeta[]; ids: Set<string> } | undefined
@@ -136,9 +144,12 @@ function cairnKbRepo(dir: string): SourceRepository {
     return cache
   }
   return {
-    list: () => load().metas,
+    list: () => load().metas.filter(hasProvenance),
     // 只认列表里有的 id：防止拿路径片段去读目录外的文件
-    get: (id) => (load().ids.has(id) ? read(id) : undefined),
+    get: (id) => {
+      const s = load().ids.has(id) ? read(id) : undefined
+      return s && hasProvenance(s) ? s : undefined
+    },
   }
 }
 
