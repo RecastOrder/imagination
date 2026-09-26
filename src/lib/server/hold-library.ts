@@ -73,3 +73,34 @@ async function holdGetUncached(id: string): Promise<Source | undefined> {
     return undefined
   }
 }
+
+/**
+ * 原件（规范/图集的 PDF）与媒体图片：从 hold 流式转过来，不在本机落盘。
+ * kind = "file" ⇒ /v1/file/<id>；kind = "asset" ⇒ /v1/asset/<id>/<n>
+ */
+export async function holdStream(path: string): Promise<Response> {
+  if (!holdEnabled()) return new Response("hold 资料服务没有配置", { status: 503 })
+  // 只限制「等 hold 开始回话」这一段；开始传以后不再计时 —— 七八十 MB 的规范原件传一分钟以上是正常的
+  const ctl = new AbortController()
+  const timer = setTimeout(() => ctl.abort(), 30000)
+  try {
+    const r = await fetch(`${process.env.HOLD_LIB_URL}${path}`, {
+      headers: { authorization: `Bearer ${process.env.HOLD_LIB_TOKEN}` },
+      cache: "no-store",
+      signal: ctl.signal,
+    })
+    clearTimeout(timer)
+    if (!r.ok || !r.body) return new Response(r.status === 404 ? "没有取回" : `hold 返回 ${r.status}`, { status: r.status === 404 ? 404 : 502 })
+    return new Response(r.body, {
+      headers: {
+        "content-type": r.headers.get("content-type") ?? "application/octet-stream",
+        ...(r.headers.get("content-length") ? { "content-length": r.headers.get("content-length")! } : {}),
+        "cache-control": "private, max-age=3600",
+        "x-content-type-options": "nosniff",
+      },
+    })
+  } catch {
+    clearTimeout(timer)
+    return new Response("hold 资料服务连不上", { status: 502 })
+  }
+}

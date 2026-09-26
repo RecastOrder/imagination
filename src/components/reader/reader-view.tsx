@@ -14,6 +14,7 @@ import { SOURCE_KINDS } from "@/lib/sources/kinds"
 import type { Source } from "@/lib/sources/types"
 import { cn } from "@/lib/utils"
 import { OriginalView } from "./original-view"
+import { HoldOriginalView } from "./hold-original-view"
 import { AssistantLauncher, ReaderAssistant } from "./reader-assistant"
 import { SelectionToolbar } from "./selection-toolbar"
 import { TextView } from "./text-view"
@@ -209,7 +210,7 @@ export function ReaderView({ source }: { source: Source }) {
                 </article>
               ) : (
                 <div className="mx-auto w-full max-w-3xl min-w-0">
-                  <OriginalView source={source} zoom={steps[idx]} />
+                  {source.hasOriginal ? <HoldOriginalView source={source} /> : <OriginalView source={source} zoom={steps[idx]} />}
                   <div className="h-32" />
                 </div>
               )}
