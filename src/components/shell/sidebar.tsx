@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   BookMarkedIcon,
+  BoxesIcon,
   LogOutIcon,
   SettingsIcon,
   FolderIcon,
@@ -50,6 +51,15 @@ const NAV: { href: string; label: string; icon: LucideIcon; feature: Feature }[]
 ]
 
 /** 管理类入口：只有有对应权限的人才会看到（演示中默认当前用户是管理员） */
+/**
+ * 插件（spec 50 §5「插件 Plugin」：我们自己壳里的小工具，不以项目为单位）。
+ * 和项目 › 分析工具里的同名工具是两个入口：这里是个人随手用，项目里的会带入项目信息。
+ * 以后的插件往这里加一行即可；没有权限的不显示。
+ */
+const PLUGINS: { href: string; label: string; icon: LucideIcon; feature: Feature }[] = [
+  { href: "/plugins/gh", label: "GH 生成器", icon: BoxesIcon, feature: "tool_gh" },
+]
+
 const ADMIN_NAV: { href: string; label: string; icon: LucideIcon; adminOnly?: boolean }[] = [
   { href: "/admin/members", label: "成员与权限", icon: UsersIcon, adminOnly: true },
   { href: "/admin/audit", label: "查看记录", icon: ScrollTextIcon, adminOnly: true },
@@ -77,6 +87,7 @@ export function Sidebar({
   const { isAdmin, features } = useAccount()
   const adminNav = ADMIN_NAV.filter((i) => !i.adminOnly || isAdmin)
   const nav = NAV.filter((i) => features[i.feature])
+  const plugins = PLUGINS.filter((i) => features[i.feature])
 
   return (
     <nav
@@ -134,6 +145,17 @@ export function Sidebar({
       <div className={cn("mt-4 flex flex-col gap-0.5", rail ? "items-center" : "px-2")}>
         {!rail && <SectionLabel>工作区</SectionLabel>}
         {nav.map((item) => (
+          <SidebarItem
+            key={item.href}
+            {...item}
+            rail={rail}
+            active={pathname === item.href || pathname.startsWith(item.href + "/")}
+            onNavigate={onNavigate}
+          />
+        ))}
+        {plugins.length > 0 && !rail && <p className="px-2.5 pt-2 pb-1 text-[11px] text-muted-foreground">插件</p>}
+        {plugins.length > 0 && rail && <div aria-hidden className="my-1 h-px w-6 bg-sidebar-border" />}
+        {plugins.map((item) => (
           <SidebarItem
             key={item.href}
             {...item}
