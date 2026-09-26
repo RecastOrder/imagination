@@ -43,7 +43,13 @@ export function useSourceList(): { sources: SourceMeta[]; regions: string[]; loa
 export interface SourceSearch {
   total: number
   items: SourceMeta[]
-  facets: { kinds: Partial<Record<SourceKind, number>>; regions: Record<string, number>; years: number[] }
+  facets: {
+    kinds: Partial<Record<SourceKind, number>>
+    countries: Record<string, number>
+    subregions: Record<string, Record<string, number>>
+    series: Record<string, number>
+    years: number[]
+  }
   /** hold 资料服务那一路出了错（本机资料照常显示）：如实提示，不当成「没有」 */
   holdError?: string
 }

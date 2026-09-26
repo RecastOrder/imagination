@@ -26,6 +26,7 @@ export function SourceCard({
   return (
     <button
       type="button"
+      data-source-id={source.id}
       onClick={() => onOpen(source.id)}
       aria-current={active || undefined}
       className={cn(

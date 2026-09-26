@@ -19,6 +19,7 @@ export function parseFilters(params: Params): SourceFilters {
     q: getAll(params, "q")[0] || undefined,
     kinds: getAll(params, "kind").filter((k): k is SourceKind => k in SOURCE_KINDS),
     regions: getAll(params, "region"),
+    series: getAll(params, "series"),
     yearFrom: num("from"),
     yearTo: num("to"),
   }
@@ -29,6 +30,7 @@ export function filtersToSearch(f: SourceFilters): string {
   if (f.q) p.set("q", f.q)
   if (f.kinds.length) p.set("kind", f.kinds.join(","))
   if (f.regions.length) p.set("region", f.regions.join(","))
+  if (f.series?.length) p.set("series", f.series.join(","))
   if (f.yearFrom) p.set("from", String(f.yearFrom))
   if (f.yearTo) p.set("to", String(f.yearTo))
   const s = p.toString()
@@ -45,23 +47,38 @@ export const YEAR_PRESETS: { label: string; from?: number; to?: number }[] = [
 ]
 
 /** 本机资料列表的分面计数（与 hold 服务回的形状相同）：每项 =「保留其他条件、只改这一项」时的条数 */
+/** 地区两层的分隔符（与 hold 服务 regions.py 相同）。地区规则的正本在 hold；本机只有少量演示/卡片资料 */
+export const REGION_SEP = " · "
+export const inRegion = (region: string, r: string) => region === r || region.startsWith(r + REGION_SEP)
+/** 本机资料（cairn-kb 卡片 / 演示）的地区写法对齐到两层：只处理「全国」这一种，其余照旧（读不出就是「地区未核对」） */
+export const localRegion = (r: string) => (r === "全国" ? `中国${REGION_SEP}全国` : r)
+
 export function facetCounts(list: SourceMeta[], f: SourceFilters) {
   const kinds: Partial<Record<SourceKind, number>> = {}
-  const regions: Record<string, number> = {}
+  const countries: Record<string, number> = {}
+  const subregions: Record<string, Record<string, number>> = {}
+  const series: Record<string, number> = {}
   const years = YEAR_PRESETS.map(() => 0)
   for (const s of list) {
     if (matchSource(s, { ...f, kinds: [] })) kinds[s.kind] = (kinds[s.kind] ?? 0) + 1
-    if (matchSource(s, { ...f, regions: [] })) regions[s.region] = (regions[s.region] ?? 0) + 1
+    if (matchSource(s, { ...f, regions: [] })) {
+      const r = localRegion(s.region)
+      const c = r.split(REGION_SEP)[0]
+      countries[c] = (countries[c] ?? 0) + 1
+      if (r.includes(REGION_SEP)) (subregions[c] ??= {})[r] = (subregions[c][r] ?? 0) + 1
+    }
+    if (s.kind === "magazine" && s.publisher && matchSource(s, { ...f, series: [] })) series[s.publisher] = (series[s.publisher] ?? 0) + 1
     YEAR_PRESETS.forEach((y, i) => {
       if (matchSource(s, { ...f, yearFrom: y.from, yearTo: y.to })) years[i]++
     })
   }
-  return { kinds, regions, years }
+  return { kinds, countries, subregions, series, years }
 }
 
 export function matchSource(s: SourceMeta, f: SourceFilters): boolean {
   if (f.kinds.length && !f.kinds.includes(s.kind)) return false
-  if (f.regions.length && !f.regions.includes(s.region)) return false
+  if (f.regions.length && !f.regions.some((r) => inRegion(localRegion(s.region), r))) return false
+  if (f.series?.length && !(s.kind === "magazine" && s.publisher && f.series.includes(s.publisher))) return false
   if (f.yearFrom && s.year < f.yearFrom) return false
   if (f.yearTo && s.year > f.yearTo) return false
   if (f.q) {
@@ -87,6 +104,12 @@ export function filterChips(f: SourceFilters): { key: string; label: string; rem
       key: `region-${r}`,
       label: `地区：${r}`,
       remove: () => ({ ...f, regions: f.regions.filter((x) => x !== r) }),
+    })
+  for (const x of f.series ?? [])
+    chips.push({
+      key: `series-${x}`,
+      label: `刊名：${x}`,
+      remove: () => ({ ...f, series: (f.series ?? []).filter((y) => y !== x) }),
     })
   if (f.yearFrom || f.yearTo)
     chips.push({

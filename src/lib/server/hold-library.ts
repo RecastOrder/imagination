@@ -11,7 +11,7 @@ import { YEAR_PRESETS } from "@/lib/sources/filters"
  * 所以搜索在 hold 上跑，这里只转发；本机只经 tailnet 直连 hold（HOLD_LIB_URL），带令牌 HOLD_LIB_TOKEN。
  * 没配置 ⇒ 这一路整体关闭，资料库照旧只显示本机资料。
  */
-const ID = /^h[sam]-[0-9a-f]{16}$/
+const ID = /^h[samz]-[0-9a-f]{16}$/
 
 export const isHoldId = (id: string) => ID.test(id)
 
@@ -30,7 +30,12 @@ async function call(path: string, timeoutMs = 8000): Promise<Response> {
 
 export interface FacetCounts {
   kinds: Partial<Record<SourceKind, number>>
-  regions: Record<string, number>
+  /** 地区第一层：国家 → 条数 */
+  countries: Record<string, number>
+  /** 地区第二层：国家 → { 「国家 · 地区」 → 条数 } */
+  subregions: Record<string, Record<string, number>>
+  /** 杂志的刊名 → 期数 */
+  series: Record<string, number>
   /** 与 YEAR_PRESETS 一一对应 */
   years: number[]
 }
@@ -48,6 +53,7 @@ export async function holdSearch(f: SourceFilters, limit: number): Promise<HoldS
   if (f.q) p.set("q", f.q)
   if (f.kinds.length) p.set("kinds", f.kinds.join(","))
   if (f.regions.length) p.set("regions", f.regions.join(","))
+  if (f.series?.length) p.set("series", f.series.join(","))
   if (f.yearFrom) p.set("from", String(f.yearFrom))
   if (f.yearTo) p.set("to", String(f.yearTo))
   p.set("limit", String(limit))
