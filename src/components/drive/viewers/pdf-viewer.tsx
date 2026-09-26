@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import { MinusIcon, MoveHorizontalIcon, PlusIcon, SearchIcon } from "lucide-react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { MinusIcon, MoveHorizontalIcon, PlusIcon, ZoomInIcon } from "lucide-react"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 
 import { Button } from "@/components/ui/button"
@@ -10,10 +10,12 @@ import { cn } from "@/lib/utils"
 import { useAnnotator } from "../annotate/annotator"
 import type { ViewerProps } from "./types"
 
-const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3]
-/** 放大镜：镜片直径（CSS 像素）与倍数（相对当前显示）。owner 2026-09-26「增加放大镜图标，局部放大就可以一下子就放大了」 */
-const LENS = 240
-const LENS_X = 2.5
+const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8]
+/** 画布像素上限：放大到 8 倍时一张 A1 图纸按原比例渲染要几亿像素，浏览器会崩；超过就降清晰度，显示尺寸不变 */
+const MAX_CANVAS_W = 8192
+const MAX_CANVAS_PX = 40e6
+/** 适应宽度时左右留白（滚动区 padding 各 24px，再留 4px 余量，避免 1–2px 横向滚动条） */
+const PAD = 52
 
 /**
  * PDF：用 PDF.js 在浏览器里渲染。
@@ -24,14 +26,20 @@ const LENS_X = 2.5
 export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: ViewerProps & { banner?: React.ReactNode }) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // 缩放：默认「适应宽度」（owner 2026-09-26「源文件在读取的时候要注意页面宽度。不能只显示局部」）；
-  // 点 +/- 以后变成固定档位，点「适应宽度」回去
-  const [zoom, setZoom] = useState<number | "fit">("fit")
-  const [fitScale, setFitScale] = useState(1)
+  // 缩放两种状态：
+  // - fit：**每一页各自**按查看区宽度缩放（owner 2026-09-26「如果出现了不同的页面大小的情况下，要自动调节…统一按照宽度展示」）——
+  //   原来整份文档按第 1 页算一个比例，遇到夹在 A4 里的 A3 大图那一页就只显示局部
+  // - fixed：统一比例（± 跳档、框选放大之后）
+  const [view, setView] = useState<{ mode: "fit" } | { mode: "fixed"; scale: number }>({ mode: "fit" })
+  const [fitW, setFitW] = useState(0)
   const [page, setPage] = useState(1)
-  const [loupe, setLoupe] = useState(false)
+  const [boxZoom, setBoxZoom] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const scale = zoom === "fit" ? fitScale : ZOOMS[zoom]
+  // 每页 100% 时的尺寸（点），页面加载时各自报上来；框选放大、占位尺寸、显示百分比都用它
+  const [sizes, setSizes] = useState<Record<number, { w: number; h: number }>>({})
+  const sizeQueue = useRef<Record<number, { w: number; h: number }>>({})
+  const sizeFlush = useRef(0)
+  const pendingScroll = useRef<{ n: number; fx: number; fy: number } | null>(null)
   // 标注与测量：页面单位是 PDF 的“点”（100% 缩放时的尺寸）
   const annot = useAnnotator({
     fileId,
@@ -71,35 +79,55 @@ export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: 
     }
   }, [blob])
 
-  // 适应宽度：第 1 页在 100% 时的宽度 vs 滚动区可用宽度（左右各留 24px）；容器变宽变窄（拖抽屉）时跟着算
+  // 查看区可用宽度：容器变宽变窄（拖抽屉、改窗口）时跟着变；每页的适应比例 = 可用宽度 / 该页宽度
   useEffect(() => {
     const root = scrollRef.current
     if (!doc || !root) return
-    let w1 = 0
-    let alive = true
-    const fit = () => {
-      if (!w1 || !alive) return
-      // 左右 padding 各 24px，再留 4px 余量；向下取整 —— 四舍五入会多出 1–2px 横向滚动条（2026-09-26 实测）
-      const next = Math.max(0.25, Math.min(4, Math.floor(((root.clientWidth - 52) / w1) * 100) / 100))
-      setFitScale((old) => (Math.abs(old - next) < 0.005 ? old : next))
-    }
-    doc.getPage(1).then((pg) => {
-      w1 = pg.getViewport({ scale: 1 }).width
-      fit()
+    const measure = () => setFitW((old) => {
+      const next = Math.max(120, root.clientWidth - PAD)
+      return Math.abs(old - next) < 2 ? old : next
     })
-    const ro = new ResizeObserver(fit)
+    measure()
+    const ro = new ResizeObserver(measure)
     ro.observe(root)
-    return () => {
-      alive = false
-      ro.disconnect()
-    }
+    return () => ro.disconnect()
   }, [doc])
 
-  // 从当前比例往上 / 往下跳到最近的一档
-  const step = (dir: 1 | -1) => {
-    const i = dir > 0 ? ZOOMS.findIndex((z) => z > scale + 0.001) : ZOOMS.findLastIndex((z) => z < scale - 0.001)
-    if (i >= 0) setZoom(i)
+  // 各页尺寸陆续报上来：攒到下一帧一起写，几百页的规范不会逐页触发重排
+  const onSize = (n: number, w: number, h: number) => {
+    sizeQueue.current[n] = { w, h }
+    if (!sizeFlush.current)
+      sizeFlush.current = requestAnimationFrame(() => {
+        sizeFlush.current = 0
+        const q = sizeQueue.current
+        sizeQueue.current = {}
+        setSizes((old) => ({ ...old, ...q }))
+      })
   }
+  const scaleOf = (n: number) => {
+    if (view.mode === "fixed") return view.scale
+    const w = sizes[n]?.w ?? sizes[1]?.w ?? 595
+    return fitW ? Math.floor((fitW / w) * 1000) / 1000 : 1
+  }
+  const shown = scaleOf(page) // 工具栏显示的是当前页的比例
+
+  // 从当前比例往上 / 往下跳到最近的一档（之后统一比例）
+  const step = (dir: 1 | -1) => {
+    const z = dir > 0 ? ZOOMS.find((v) => v > shown + 0.001) : ZOOMS.findLast((v) => v < shown - 0.001)
+    if (z) setView({ mode: "fixed", scale: z })
+  }
+
+  // 框选放大之后：新比例的页面排好了，把框的左上角滚到视野左上
+  useLayoutEffect(() => {
+    const p = pendingScroll.current
+    const root = scrollRef.current
+    if (!p || !root) return
+    const el = root.querySelector<HTMLElement>(`[data-page="${p.n}"]`)
+    if (!el) return
+    pendingScroll.current = null
+    root.scrollLeft = el.offsetLeft + p.fx * el.offsetWidth - 24
+    root.scrollTop = el.offsetTop + p.fy * el.offsetHeight - 24
+  }, [view])
 
   // 当前页码：看哪一页的顶部在视口上半部分
   useEffect(() => {
@@ -114,7 +142,7 @@ export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: 
     )
     root.querySelectorAll("[data-page]").forEach((el) => io.observe(el))
     return () => io.disconnect()
-  }, [doc, scale])
+  }, [doc, view, fitW])
 
   if (error) return <p className="p-8 text-center text-sm text-destructive">{error}</p>
   if (!doc)
@@ -124,39 +152,40 @@ export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: 
       </div>
     )
 
+  const viewKey = view.mode === "fit" ? `f${fitW}` : `s${view.scale}`
   return (
     // @container：工具栏的文字标签按查看器自己的宽度显示（放进右侧抽屉时窗口宽、查看器窄）
     <div className="@container flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-1 border-b px-4 py-1.5">
-        <Button variant="ghost" size="icon-sm" disabled={scale <= ZOOMS[0] + 0.001} onClick={() => step(-1)} aria-label="缩小">
+        <Button variant="ghost" size="icon-sm" disabled={shown <= ZOOMS[0] + 0.001} onClick={() => step(-1)} aria-label="缩小">
           <MinusIcon />
         </Button>
-        <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">{Math.round(scale * 100)}%</span>
-        <Button variant="ghost" size="icon-sm" disabled={scale >= ZOOMS[ZOOMS.length - 1] - 0.001} onClick={() => step(1)} aria-label="放大">
+        <span className="w-12 text-center text-xs text-muted-foreground tabular-nums">{Math.round(shown * 100)}%</span>
+        <Button variant="ghost" size="icon-sm" disabled={shown >= ZOOMS[ZOOMS.length - 1] - 0.001} onClick={() => step(1)} aria-label="放大">
           <PlusIcon />
         </Button>
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-pressed={zoom === "fit"}
-          className={cn(zoom === "fit" && "bg-accent text-foreground")}
-          onClick={() => setZoom("fit")}
+          aria-pressed={view.mode === "fit"}
+          className={cn(view.mode === "fit" && "bg-accent text-foreground")}
+          onClick={() => setView({ mode: "fit" })}
           aria-label="适应宽度"
-          title="适应宽度：整页宽度放进窗口"
+          title="适应宽度：每一页都按窗口宽度整页显示"
         >
           <MoveHorizontalIcon />
         </Button>
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-pressed={loupe}
-          data-loupe-toggle
-          className={cn(loupe && "bg-accent text-foreground")}
-          onClick={() => setLoupe((v) => !v)}
-          aria-label={loupe ? "关闭放大镜" : "放大镜"}
-          title={`放大镜：鼠标指到哪里，就把那一块放大 ${LENS_X} 倍`}
+          aria-pressed={boxZoom}
+          data-boxzoom-toggle
+          className={cn(boxZoom && "bg-accent text-foreground")}
+          onClick={() => setBoxZoom((v) => !v)}
+          aria-label={boxZoom ? "取消框选放大" : "框选放大"}
+          title="框选放大：在页面上拖一个框，松手就把框里的内容放大到填满窗口（按 ↔ 回到整页）"
         >
-          <SearchIcon />
+          <ZoomInIcon />
         </Button>
         <span className="mx-2 h-4 w-px bg-border" aria-hidden />
         {annot.toolbar}
@@ -166,13 +195,34 @@ export function PdfViewer({ name, blob, fileId, banner, readOnly, focusIssue }: 
       </div>
       {banner}
       <div className="flex min-h-0 flex-1">
-        <div ref={scrollRef} className={cn("relative min-w-0 flex-1 overflow-auto bg-surface-sunken", loupe && "cursor-zoom-in")}>
+        <div ref={scrollRef} className={cn("relative min-w-0 flex-1 overflow-auto bg-surface-sunken", boxZoom && "cursor-crosshair select-none")}>
           <div className="flex w-max min-w-full flex-col items-center gap-4 p-6">
             {Array.from({ length: doc.numPages }, (_, i) => (
-              <PdfPage key={`${i}-${scale}`} doc={doc} n={i + 1} scale={scale} root={scrollRef} overlay={annot.layer} />
+              <PdfPage
+                key={`${i}-${viewKey}`}
+                doc={doc}
+                n={i + 1}
+                scale={view.mode === "fixed" ? view.scale : undefined}
+                fitWidth={view.mode === "fit" ? fitW : undefined}
+                guess={sizes[i + 1] ?? sizes[1]}
+                onSize={onSize}
+                root={scrollRef}
+                overlay={annot.layer}
+              />
             ))}
           </div>
-          {loupe && <Loupe doc={doc} scale={scale} root={scrollRef} />}
+          {boxZoom && (
+            <BoxZoom
+              root={scrollRef}
+              onZoom={(n, fx, fy, fw) => {
+                const w = sizes[n]?.w ?? 595
+                const s = Math.max(ZOOMS[0], Math.min(ZOOMS[ZOOMS.length - 1], Math.floor(((fitW || 600) / (fw * w)) * 1000) / 1000))
+                pendingScroll.current = { n, fx, fy }
+                setView({ mode: "fixed", scale: s })
+                setBoxZoom(false) // 一次框选放大一次；要再放大就再点一次
+              }}
+            />
+          )}
         </div>
         {annot.panel}
       </div>
@@ -185,19 +235,29 @@ function PdfPage({
   doc,
   n,
   scale,
+  fitWidth,
+  guess,
+  onSize,
   root,
   overlay,
 }: {
   doc: PDFDocumentProxy
   n: number
-  scale: number
+  /** 统一比例；与 fitWidth 二选一 */
+  scale?: number
+  /** 适应宽度：这一页按这个宽度（CSS 像素）缩放 */
+  fitWidth?: number
+  /** 尺寸还没取到时的占位（点）：用已知的这一页或第 1 页 */
+  guess?: { w: number; h: number }
+  onSize: (n: number, w: number, h: number) => void
   root: React.RefObject<HTMLDivElement | null>
   /** 叠加层（标注）：参数是页码、页面宽高（100% 时的点）、当前缩放 */
   overlay?: (page: number, w: number, h: number, displayScale: number) => React.ReactNode
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  const [base, setBase] = useState<{ w: number; h: number } | null>(null)
+  const eff = (b: { w: number; h: number }) => (fitWidth ? Math.floor((fitWidth / b.w) * 1000) / 1000 : (scale ?? 1))
 
   useEffect(() => {
     let cancelled = false
@@ -205,15 +265,20 @@ function PdfPage({
     let io: IntersectionObserver | null = null
     doc.getPage(n).then((pg) => {
       if (cancelled) return
-      const vp = pg.getViewport({ scale })
-      setSize({ w: vp.width, h: vp.height })
+      const vp1 = pg.getViewport({ scale: 1 })
+      const b = { w: vp1.width, h: vp1.height }
+      setBase(b)
+      onSize(n, b.w, b.h)
+      const s = eff(b)
       // 进入视口附近才渲染
       io = new IntersectionObserver(
         ([e]) => {
           if (!e.isIntersecting || !canvasRef.current) return
           io?.disconnect()
           const dpr = window.devicePixelRatio || 1
-          const hi = pg.getViewport({ scale: scale * dpr })
+          // 清晰度封顶：放大很多倍时不按原比例渲染整页（会崩），显示尺寸不变、只是略糊
+          const r = Math.min(s * dpr, MAX_CANVAS_W / b.w, Math.sqrt(MAX_CANVAS_PX / (b.w * b.h)))
+          const hi = pg.getViewport({ scale: r })
           const canvas = canvasRef.current
           canvas.width = hi.width
           canvas.height = hi.height
@@ -228,110 +293,81 @@ function PdfPage({
       io?.disconnect()
       task?.cancel()
     }
-  }, [doc, n, scale, root])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 比例变化时父组件换 key 重建本页
+  }, [doc, n, root])
 
+  const b = base ?? guess ?? { w: 595, h: 842 }
+  const s = eff(b)
   return (
-    <div
-      ref={wrapRef}
-      data-page={n}
-      className="relative bg-paper shadow-float ring-1 ring-ink/5"
-      style={size ? { width: size.w, height: size.h } : { width: 595 * scale, height: 842 * scale }}
-    >
+    <div ref={wrapRef} data-page={n} className="relative bg-paper shadow-float ring-1 ring-ink/5" style={{ width: b.w * s, height: b.h * s }}>
       <canvas ref={canvasRef} aria-label={`第 ${n} 页`} className="h-full w-full" />
-      {size && overlay?.(n, size.w / scale, size.h / scale, scale)}
+      {base && overlay?.(n, base.w, base.h, s)}
     </div>
   )
 }
 
 /**
- * 放大镜：鼠标在页面上移动时，镜片（圆形，LENS 像素）跟着指针，显示指针下那一块放大 LENS_X 倍的样子。
- * 镜片单独按「当前比例 × LENS_X × 设备像素比」渲染那一页（缓存到换页或换比例），放大后文字不糊；
- * 太大的页面限制在 6000 像素宽，避免一页吃掉几百 MB 内存。镜片不拦鼠标（pointer-events: none），不影响滚动与标注。
+ * 框选放大（owner 2026-09-26「放大镜的目的是为了局部放大，点击放大镜的时候可以局部框选并放大局部信息」）：
+ * 在某一页上按下拖出一个框，松手时回报「第几页 · 框左上角在页内的相对位置 · 框宽占页宽的比例」，由查看器换算新比例并滚过去。
+ * 框太小（< 8px）当成误点，不放大。拖出页外按那一页的边界截住。
  */
-function Loupe({ doc, scale, root }: { doc: PDFDocumentProxy; scale: number; root: React.RefObject<HTMLDivElement | null> }) {
-  const lensRef = useRef<HTMLCanvasElement>(null)
-  const [at, setAt] = useState<{ x: number; y: number; n: number; fx: number; fy: number } | null>(null)
-  const cache = useRef<{ key: string; canvas: HTMLCanvasElement; k: number } | null>(null)
-  const pending = useRef<string | null>(null)
-
-  const draw = useCallback(() => {
-    const lens = lensRef.current
-    const c = cache.current
-    if (!lens || !at || !c || c.key !== `${at.n}@${scale}`) return
-    const dpr = window.devicePixelRatio || 1
-    lens.width = LENS * dpr
-    lens.height = LENS * dpr
-    const g = lens.getContext("2d")!
-    g.fillStyle = "#fff"
-    g.fillRect(0, 0, lens.width, lens.height)
-    // 镜片中心 = 指针在页面上的位置（fx, fy 是 0–1 的相对坐标）；取源图中以它为中心、边长 LENS/LENS_X（显示像素）的那一块
-    // c.k = 高清页面每个显示像素对应多少源像素；镜片里看到的是 LENS/LENS_X 个显示像素见方的那一块
-    //（2026-09-26 第一版把 c.k 写反成了「整页源像素宽 / c.k」，取了一块比整页还大几十倍的区域 ⇒ 镜片一片白只剩一个点）
-    const src = (LENS / LENS_X) * c.k
-    const cx = at.fx * c.canvas.width
-    const cy = at.fy * c.canvas.height
-    g.drawImage(c.canvas, cx - src / 2, cy - src / 2, src, src, 0, 0, lens.width, lens.height)
-  }, [at, scale])
-
+function BoxZoom({ root, onZoom }: { root: React.RefObject<HTMLDivElement | null>; onZoom: (n: number, fx: number, fy: number, fw: number) => void }) {
+  const [rect, setRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  // 回调放进 ref：父组件重排（比如当前页码变了）时不重新挂监听，拖到一半的框不会丢
+  const cb = useRef(onZoom)
+  useEffect(() => {
+    cb.current = onZoom
+  }, [onZoom])
   useEffect(() => {
     const el = root.current
     if (!el) return
-    const move = (e: MouseEvent) => {
-      const pageEl = (e.target as HTMLElement).closest<HTMLElement>("[data-page]")
-      if (!pageEl) return setAt(null)
-      const r = pageEl.getBoundingClientRect()
+    let start: { pageEl: HTMLElement; x: number; y: number } | null = null
+    const local = (e: MouseEvent) => {
       const box = el.getBoundingClientRect()
-      setAt({
-        x: e.clientX - box.left + el.scrollLeft,
-        y: e.clientY - box.top + el.scrollTop,
-        n: Number(pageEl.dataset.page),
-        fx: (e.clientX - r.left) / r.width,
-        fy: (e.clientY - r.top) / r.height,
-      })
+      return { x: e.clientX - box.left + el.scrollLeft, y: e.clientY - box.top + el.scrollTop }
     }
-    const leave = () => setAt(null)
-    el.addEventListener("mousemove", move)
-    el.addEventListener("mouseleave", leave)
+    const down = (e: MouseEvent) => {
+      const pageEl = (e.target as HTMLElement).closest<HTMLElement>("[data-page]")
+      if (!pageEl || e.button !== 0) return
+      e.preventDefault()
+      start = { pageEl, ...local(e) }
+      setRect({ x: start.x, y: start.y, w: 0, h: 0 })
+    }
+    const move = (e: MouseEvent) => {
+      if (!start) return
+      const p = local(e)
+      setRect({ x: Math.min(start.x, p.x), y: Math.min(start.y, p.y), w: Math.abs(p.x - start.x), h: Math.abs(p.y - start.y) })
+    }
+    const up = (e: MouseEvent) => {
+      if (!start) return
+      const s = start
+      start = null
+      setRect(null)
+      const pr = s.pageEl.getBoundingClientRect()
+      const box = el.getBoundingClientRect()
+      const x0 = Math.max(pr.left, Math.min(e.clientX, s.x - el.scrollLeft + box.left))
+      const x1 = Math.min(pr.right, Math.max(e.clientX, s.x - el.scrollLeft + box.left))
+      const y0 = Math.max(pr.top, Math.min(e.clientY, s.y - el.scrollTop + box.top))
+      const y1 = Math.min(pr.bottom, Math.max(e.clientY, s.y - el.scrollTop + box.top))
+      if (x1 - x0 < 8 || y1 - y0 < 8) return
+      cb.current(Number(s.pageEl.dataset.page), (x0 - pr.left) / pr.width, (y0 - pr.top) / pr.height, (x1 - x0) / pr.width)
+    }
+    el.addEventListener("mousedown", down)
+    window.addEventListener("mousemove", move)
+    window.addEventListener("mouseup", up)
     return () => {
-      el.removeEventListener("mousemove", move)
-      el.removeEventListener("mouseleave", leave)
+      el.removeEventListener("mousedown", down)
+      window.removeEventListener("mousemove", move)
+      window.removeEventListener("mouseup", up)
     }
   }, [root])
-
-  // 换页或换比例时，把这一页按放大倍数渲染一份
-  useEffect(() => {
-    if (!at) return
-    const key = `${at.n}@${scale}`
-    if (cache.current?.key === key || pending.current === key) return
-    pending.current = key
-    doc.getPage(at.n).then(async (pg) => {
-      const dpr = window.devicePixelRatio || 1
-      const base = pg.getViewport({ scale: 1 })
-      const k = Math.min(scale * LENS_X * dpr, 6000 / base.width)
-      const vp = pg.getViewport({ scale: k })
-      const canvas = document.createElement("canvas")
-      canvas.width = vp.width
-      canvas.height = vp.height
-      await pg.render({ canvas, viewport: vp }).promise
-      // k 换算成「每个显示像素对应多少源像素」：canvas 宽 / 页面显示宽
-      cache.current = { key, canvas, k: canvas.width / (base.width * scale) }
-      pending.current = null
-      draw()
-    }).catch(() => {
-      pending.current = null // 取页或渲染失败：复位，下次移动再试（不让这一页从此画不出来）
-    })
-  }, [at, doc, scale, draw])
-
-  useEffect(draw, [draw])
-
-  if (!at) return null
+  if (!rect) return null
   return (
-    <canvas
-      ref={lensRef}
-      data-loupe
+    <div
+      data-boxzoom-rect
       aria-hidden
-      className="pointer-events-none absolute z-20 rounded-full border-2 border-background shadow-float ring-1 ring-ink/20"
-      style={{ width: LENS, height: LENS, left: at.x - LENS / 2, top: at.y - LENS / 2 }}
+      className="pointer-events-none absolute z-20 border-2 border-primary bg-primary/10"
+      style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
     />
   )
 }

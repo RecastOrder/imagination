@@ -31,7 +31,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // 预览面板是否打开：由一个小组件单独读取网址参数，
   // 避免整个外壳因为读网址参数而放弃服务端渲染（否则首屏是空白）
   const [peekOpen, setPeekOpen] = useState(false)
-  const [userCollapsed, setUserCollapsed] = useState(false)
+  // 用户手动选的（展开 / 收起）优先于自动规则；"auto" = 按下面的让位规则走。
+  // 抽屉开关一次就回到 auto（owner 2026-09-26：自动收起后点展开「没有反应」—— 原来自动规则压过了手动）
+  // 记下手动选择时抽屉开没开；抽屉状态一变，这次手动选择就失效（回到自动）—— 不用副作用去清
+  const [manual, setManual] = useState<{ v: "expanded" | "collapsed"; peek: boolean } | null>(null)
+  const pref = manual && manual.peek === peekOpen ? manual.v : "auto"
   const [drawerOpen, setDrawerOpen] = useState(false)
   const router = useRouter()
   // 自带目录树的页面（文件浏览）：应用侧栏自动收成图标栏，把宽度让给目录和内容
@@ -51,7 +55,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // 手机上“显示 / 隐藏侧栏”交给 CSS 媒体查询决定（服务端渲染时就正确，不会先闪一下桌面布局）；
   // JS 只负责桌面上“展开 / 图标栏”的选择
-  const variant: SidebarVariant = !isLg ? "rail" : userCollapsed || ((peekOpen || hasOwnTree) && !isWide) ? "rail" : "expanded"
+  const auto: SidebarVariant = (peekOpen || hasOwnTree) && !isWide ? "rail" : "expanded"
+  const variant: SidebarVariant = !isLg ? "rail" : pref === "auto" ? auto : pref === "collapsed" ? "rail" : "expanded"
 
   return (
     <TooltipProvider>
@@ -60,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Suspense>
       <div className="flex h-dvh overflow-hidden">
         <div className="hidden md:flex">
-          <Sidebar variant={variant} onToggle={isLg ? () => setUserCollapsed((v) => !v) : undefined} />
+          <Sidebar variant={variant} onToggle={isLg ? () => setManual({ v: variant === "rail" ? "expanded" : "collapsed", peek: peekOpen }) : undefined} />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
