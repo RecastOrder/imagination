@@ -57,9 +57,24 @@ export interface Source {
    * 没有这一项的资料不上对外页面（资料库、阅读页）。url = 取回文件的网址；page = 它所在的页面 / 公告页；
    * ref = 站内编号（台账没记网址时，不拼网址）
    */
-  provenance?: { lane: string; url?: string; page?: string; at?: string; ref?: string; unverified?: string }
+  provenance?: {
+    lane: string
+    url?: string
+    page?: string
+    at?: string
+    ref?: string
+    unverified?: string
+    /** 发布方名称（取自该站自己的页面标题）与档位：发布机关 · 官方信息平台 · 出版社电子书库 · 档案网站 · 媒体网站（R154 ⊕） */
+    issuer?: string
+    issuerKind?: string
+  }
   /** 被打开的次数（hold 记的，排序用；owner 2026-09-26「搜索次数多的多往前面排」） */
   opens?: number
+  /** 规范类型（hold 按编号前缀判：国家标准 · 强制性 / 推荐性 · 行业 · 地方 · 团体 · 企业 · 国外），判不出就没有（spec 107） */
+  std_type?: string | null
+  /** 图集的专业与专题、来源（书库分类树；树外的按图集号推断），spec 107 */
+  atlas_disc?: string[]
+  atlas_src?: string[]
   /** 原文里的图（按出现顺序）：local = hold 上已经取回了这张图；没取回的只给原网址 */
   images?: { n: number; url: string; local: boolean }[]
   sections: SourceSection[]
@@ -79,6 +94,10 @@ export interface SourceFilters {
   regions: string[]
   /** 杂志的刊名（类别）；为空 = 不限 */
   series?: string[]
+  /** 规范类型 · 图集专业与专题 · 图集来源（spec 107）；为空 = 不限 */
+  stdTypes?: string[]
+  atlasDisc?: string[]
+  atlasSrc?: string[]
   yearFrom?: number
   yearTo?: number
 }

@@ -5,7 +5,7 @@ import { CheckIcon, ChevronRightIcon } from "lucide-react"
 
 import { REGION_SEP, YEAR_PRESETS } from "@/lib/sources/filters"
 import { SOURCE_KIND_ORDER, SOURCE_KINDS } from "@/lib/sources/kinds"
-import type { SourceFilters } from "@/lib/sources/types"
+import type { SourceFilters, SourceKind } from "@/lib/sources/types"
 import type { SourceSearch } from "@/hooks/use-sources"
 import { cn } from "@/lib/utils"
 
@@ -45,6 +45,23 @@ export function Facets({
 
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
 
+  // 只选了一种资料类型时，才显示那一类自己的分法（spec 107，owner 2026-09-26「我点击了规范，则显示对应的国别地区和规范的类型…
+  // 点击图集，则目前应该只有中国的图集。 然后有不同的分类…杂志…有国别的杂志需求和不同类型的杂志的需求」）
+  const only = filters.kinds.length === 1 ? filters.kinds[0] : null
+  // 换资料类型时清掉上一类专属的条件：藏起来的条件还在网址里筛，列表就会莫名其妙变少
+  const setKinds = (kinds: SourceKind[]) => {
+    const next = kinds.length === 1 ? kinds[0] : null
+    onChange({
+      ...filters,
+      kinds,
+      stdTypes: next === "standard" ? filters.stdTypes : [],
+      atlasDisc: next === "atlas" ? filters.atlasDisc : [],
+      atlasSrc: next === "atlas" ? filters.atlasSrc : [],
+      series: next === "magazine" ? filters.series : [],
+      regions: next === "atlas" ? [] : filters.regions,
+    })
+  }
+
   return (
     <div className="space-y-6">
       <FacetGroup title="资料类型">
@@ -55,7 +72,7 @@ export function Facets({
               key={k}
               checked={filters.kinds.includes(k)}
               count={counts?.kinds[k] ?? 0}
-              onClick={() => onChange({ ...filters, kinds: toggle(filters.kinds, k) })}
+              onClick={() => setKinds(toggle(filters.kinds, k))}
             >
               <Icon className="size-3.5 text-muted-foreground" />
               {label}
@@ -64,6 +81,35 @@ export function Facets({
         })}
       </FacetGroup>
 
+      {only === "standard" && (
+        <ListFacet
+          title="规范类型"
+          counts={counts?.stdTypes}
+          order={STD_TYPE_ORDER}
+          selected={filters.stdTypes ?? []}
+          onToggle={(x) => onChange({ ...filters, stdTypes: toggle(filters.stdTypes ?? [], x) })}
+        />
+      )}
+      {only === "atlas" && (
+        <>
+          <ListFacet
+            title="来源"
+            counts={counts?.atlasSrc}
+            selected={filters.atlasSrc ?? []}
+            onToggle={(x) => onChange({ ...filters, atlasSrc: toggle(filters.atlasSrc ?? [], x) })}
+          />
+          <ListFacet
+            title="专业与专题"
+            counts={counts?.atlasDisc}
+            selected={filters.atlasDisc ?? []}
+            onToggle={(x) => onChange({ ...filters, atlasDisc: toggle(filters.atlasDisc ?? [], x) })}
+            shown={12}
+          />
+        </>
+      )}
+
+      {/* 图集目前只有中国的：国别这一层不显示（spec 107） */}
+      {only !== "atlas" && (
       <FacetGroup title="地区">
         {countries.map((c) => {
           const subs = Object.entries(counts?.subregions?.[c] ?? {}).sort((a, b) => b[1] - a[1])
@@ -121,8 +167,9 @@ export function Facets({
           )
         })}
       </FacetGroup>
+      )}
 
-      {series.length > 0 && (
+      {only === "magazine" && series.length > 0 && (
         <FacetGroup title="刊名">
           {(allSeries ? series : series.filter(([x], i) => i < SERIES_SHOWN || (filters.series ?? []).includes(x))).map(([x, n]) => (
             <FacetOption
@@ -164,6 +211,47 @@ export function Facets({
         })}
       </FacetGroup>
     </div>
+  )
+}
+
+/** 规范类型的固定顺序：按效力层级（R28 / spec 44），不按条数 —— 条数排序会把团标排到国标前面 */
+const STD_TYPE_ORDER = ["国家标准 · 强制性", "国家标准 · 推荐性", "行业标准", "地方标准", "团体标准", "企业标准", "国外标准"]
+
+/** 一组多选分面（规范类型 · 图集来源 · 图集专业）：已选的即使当前是 0 也留着；多了先显示前 shown 个，「显示全部」不悄悄截掉 */
+function ListFacet({
+  title,
+  counts,
+  order,
+  selected,
+  onToggle,
+  shown = 99,
+}: {
+  title: string
+  counts?: Record<string, number>
+  order?: string[]
+  selected: string[]
+  onToggle: (x: string) => void
+  shown?: number
+}) {
+  const [all, setAll] = useState(false)
+  const entries = Object.entries(counts ?? {})
+  for (const x of selected) if (!entries.some(([n]) => n === x)) entries.push([x, 0])
+  entries.sort((a, b) => (order ? (order.indexOf(a[0]) + 1 || 99) - (order.indexOf(b[0]) + 1 || 99) : 0) || b[1] - a[1])
+  if (!entries.length) return null
+  const list = all ? entries : entries.filter(([x], i) => i < shown || selected.includes(x))
+  return (
+    <FacetGroup title={title}>
+      {list.map(([x, n]) => (
+        <FacetOption key={x} checked={selected.includes(x)} count={n} onClick={() => onToggle(x)} title={x}>
+          {x}
+        </FacetOption>
+      ))}
+      {entries.length > shown && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="mt-1 cursor-pointer px-2 py-1 text-left text-xs text-muted-foreground hover:text-foreground">
+          {all ? "收起" : `显示全部 ${entries.length} 项`}
+        </button>
+      )}
+    </FacetGroup>
   )
 }
 

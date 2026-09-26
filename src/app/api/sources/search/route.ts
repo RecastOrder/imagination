@@ -36,6 +36,8 @@ export async function GET(req: Request) {
       for (const [c, subs] of Object.entries(h.facets.subregions))
         for (const [r, n] of Object.entries(subs)) (facets.subregions[c] ??= {})[r] = (facets.subregions[c][r] ?? 0) + n
       for (const [x, n] of Object.entries(h.facets.series)) facets.series[x] = (facets.series[x] ?? 0) + n
+      for (const key of ["stdTypes", "atlasDisc", "atlasSrc"] as const)
+        for (const [x, n] of Object.entries(h.facets[key] ?? {})) facets[key][x] = (facets[key][x] ?? 0) + n
       h.facets.years.forEach((n, i) => (facets.years[i] = (facets.years[i] ?? 0) + n))
     }
   }
