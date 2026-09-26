@@ -35,6 +35,30 @@ export function filtersToSearch(f: SourceFilters): string {
   return s ? `?${s}` : ""
 }
 
+/** 年份分档：筛选栏与服务端分面计数共用同一张表 */
+export const YEAR_PRESETS: { label: string; from?: number; to?: number }[] = [
+  { label: "不限" },
+  { label: "2020 年以后", from: 2020 },
+  { label: "2010–2019", from: 2010, to: 2019 },
+  { label: "2000–2009", from: 2000, to: 2009 },
+  { label: "2000 年以前", to: 1999 },
+]
+
+/** 本机资料列表的分面计数（与 hold 服务回的形状相同）：每项 =「保留其他条件、只改这一项」时的条数 */
+export function facetCounts(list: SourceMeta[], f: SourceFilters) {
+  const kinds: Partial<Record<SourceKind, number>> = {}
+  const regions: Record<string, number> = {}
+  const years = YEAR_PRESETS.map(() => 0)
+  for (const s of list) {
+    if (matchSource(s, { ...f, kinds: [] })) kinds[s.kind] = (kinds[s.kind] ?? 0) + 1
+    if (matchSource(s, { ...f, regions: [] })) regions[s.region] = (regions[s.region] ?? 0) + 1
+    YEAR_PRESETS.forEach((y, i) => {
+      if (matchSource(s, { ...f, yearFrom: y.from, yearTo: y.to })) years[i]++
+    })
+  }
+  return { kinds, regions, years }
+}
+
 export function matchSource(s: SourceMeta, f: SourceFilters): boolean {
   if (f.kinds.length && !f.kinds.includes(s.kind)) return false
   if (f.regions.length && !f.regions.includes(s.region)) return false

@@ -1,0 +1,75 @@
+import { cache } from "react"
+
+import type { Source, SourceFilters, SourceKind, SourceMeta } from "@/lib/sources/types"
+import { YEAR_PRESETS } from "@/lib/sources/filters"
+
+/**
+ * hold 资料服务（holdlib）：规范 · 图集 · 媒体 的正本都在 hold 上，目录由 hold 从台账现算（owner 2026-09-26
+ * 「把规范接入规范， 图集接入图集，媒体接入媒体。 后续最好是对应接口自动接入」）。
+ *
+ * 为什么不像 cairn-kb 那样把目录装进本进程：hold 那边有二十多万条，而本服务限额 700 MB、实测已用 570 MB。
+ * 所以搜索在 hold 上跑，这里只转发；本机只经 tailnet 直连 hold（HOLD_LIB_URL），带令牌 HOLD_LIB_TOKEN。
+ * 没配置 ⇒ 这一路整体关闭，资料库照旧只显示本机资料。
+ */
+const ID = /^h[sam]-[0-9a-f]{16}$/
+
+export const isHoldId = (id: string) => ID.test(id)
+
+export function holdEnabled() {
+  return Boolean(process.env.HOLD_LIB_URL && process.env.HOLD_LIB_TOKEN)
+}
+
+async function call(path: string, timeoutMs = 8000): Promise<Response> {
+  if (!holdEnabled()) throw new Error("hold 资料服务没有配置")
+  return fetch(`${process.env.HOLD_LIB_URL}${path}`, {
+    headers: { authorization: `Bearer ${process.env.HOLD_LIB_TOKEN}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(timeoutMs),
+  })
+}
+
+export interface FacetCounts {
+  kinds: Partial<Record<SourceKind, number>>
+  regions: Record<string, number>
+  /** 与 YEAR_PRESETS 一一对应 */
+  years: number[]
+}
+
+export interface SearchResult {
+  total: number
+  items: SourceMeta[]
+  facets: FacetCounts
+}
+
+export type HoldSearch = SearchResult | { error: string; status: number }
+
+export async function holdSearch(f: SourceFilters, limit: number): Promise<HoldSearch> {
+  const p = new URLSearchParams()
+  if (f.q) p.set("q", f.q)
+  if (f.kinds.length) p.set("kinds", f.kinds.join(","))
+  if (f.regions.length) p.set("regions", f.regions.join(","))
+  if (f.yearFrom) p.set("from", String(f.yearFrom))
+  if (f.yearTo) p.set("to", String(f.yearTo))
+  p.set("limit", String(limit))
+  p.set("ypre", YEAR_PRESETS.map((y) => `${y.from ?? ""}-${y.to ?? ""}`).join(","))
+  try {
+    const r = await call(`/v1/search?${p}`)
+    if (!r.ok) return { error: r.status === 503 ? "hold 资料目录还在建" : `hold 资料服务返回 ${r.status}`, status: r.status }
+    return (await r.json()) as SearchResult
+  } catch {
+    return { error: "hold 资料服务连不上", status: 502 }
+  }
+}
+
+/** 同一次请求里（阅读页的标题 + 正文）只向 hold 取一次 */
+export const holdGet = cache(holdGetUncached)
+
+async function holdGetUncached(id: string): Promise<Source | undefined> {
+  if (!isHoldId(id) || !holdEnabled()) return undefined
+  try {
+    const r = await call(`/v1/source/${id}`, 15000)
+    return r.ok ? ((await r.json()) as Source) : undefined
+  } catch {
+    return undefined
+  }
+}
