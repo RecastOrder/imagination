@@ -14,6 +14,8 @@ export interface SourceSection {
   paragraphs: string[]
   /** 在原版 PDF 中的起始页码：文本视图和原版视图靠它互相对应 */
   page: number
+  /** 插在正文里的图（媒体报道按原文顺序）：after = 插在第几段之后（-1 = 本节开头），n = Source.images 的下标 */
+  figures?: { after: number; n: number; caption: string }[]
 }
 
 /** 规范的效力状态：严谨模式下必须显示 */
@@ -50,6 +52,8 @@ export interface Source {
   originUrl?: string
   /** 版权说明原话（例如「仅供内部研究 · 不得转载」） */
   rights?: string
+  /** 原文里的图（按出现顺序）：local = hold 上已经取回了这张图；没取回的只给原网址 */
+  images?: { n: number; url: string; local: boolean }[]
   sections: SourceSection[]
 }
 

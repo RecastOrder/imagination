@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment } from "react"
-import { BookmarkIcon } from "lucide-react"
+import { BookmarkIcon, ExternalLinkIcon, ImageOffIcon } from "lucide-react"
 
 import { useLocalStore } from "@/hooks/use-local-store"
 import { highlightsStore, notesStore } from "@/lib/notebook/store"
@@ -24,8 +24,9 @@ export function TextView({ source, fontSize }: { source: Source; fontSize: numbe
         <section key={s.id} id={s.id} className="scroll-mt-6">
           <h2 className="mt-10 mb-4 flex items-baseline gap-3 font-sans text-lg font-semibold">
             {s.title}
-            <span className="font-mono text-xs font-normal text-muted-foreground">原版 p.{s.page}</span>
+            {source.kind !== "report" && <span className="font-mono text-xs font-normal text-muted-foreground">原版 p.{s.page}</span>}
           </h2>
+          {figuresAfter(source, s.figures, -1)}
           {s.paragraphs.map((p, i) => {
             const marks = mine.filter((h) => h.sectionId === s.id && h.paragraph === i).map((h) => h)
             const excerpted = excerpts.some((n) => n.sectionId === s.id && p.includes(n.text))
@@ -39,8 +40,8 @@ export function TextView({ source, fontSize }: { source: Source; fontSize: numbe
                 )}
                 {renderMarks(p, marks, (id) => writeHighlights((hs) => hs.filter((h) => h.id !== id)))}
               </p>
-            )
-          })}
+            ) as React.ReactNode
+          }).flatMap((node, i) => [node, <Fragment key={`f${i}`}>{figuresAfter(source, s.figures, i)}</Fragment>])}
         </section>
       ))}
     </div>
@@ -78,4 +79,35 @@ function renderMarks(text: string, marks: { id: string; text: string }[], onRemo
     rest = rest.slice(idx + m.text.length)
   }
   return parts
+}
+
+/**
+ * 原文里的图（媒体报道）：按原文顺序插在对应段落之后。hold 上已取回的直接显示；
+ * 没取回的如实写出来并给原网址 —— 不从外站直接加载（那等于让读者的浏览器去别人服务器上取图）。
+ */
+function figuresAfter(source: Source, figures: { after: number; n: number; caption: string }[] | undefined, after: number) {
+  const list = figures?.filter((f) => f.after === after) ?? []
+  if (!list.length) return null
+  return list.map((f) => {
+    const img = source.images?.[f.n]
+    return (
+      <figure key={`fig-${f.n}`} data-figure={f.n} className="my-6 font-sans">
+        {img?.local ? (
+          // eslint-disable-next-line @next/next/no-img-element -- 鉴权后的动态图，从 hold 流式转来，不走 next/image 优化
+          <img src={`/api/sources/${source.id}/asset/${f.n}`} alt={f.caption || `图 ${f.n + 1}`} loading="lazy" className="w-full rounded-md bg-surface-sunken" />
+        ) : (
+          <div className="flex items-center gap-2 rounded-md border border-dashed px-4 py-6 text-sm text-muted-foreground">
+            <ImageOffIcon className="size-4" />
+            这张图还没取回到资料库
+            {img?.url && (
+              <a href={img.url} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground">
+                原网址 <ExternalLinkIcon className="size-3.5" />
+              </a>
+            )}
+          </div>
+        )}
+        {f.caption && <figcaption className="mt-2 text-sm text-muted-foreground">{f.caption}</figcaption>}
+      </figure>
+    )
+  })
 }
